@@ -11,7 +11,6 @@ struct qr_code {
 };
 
 int code_side_length(int format);
-int code_finder_count(int format);
 
 size_t code_total_capacity(int format);
 

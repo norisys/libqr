@@ -19,18 +19,25 @@ int code_side_length(int format)
         return format * 4 + 17;
 }
 
-int code_finder_count(int format)
-{
-        int x = format / 7;
-        return format > 1 ? x*x + 4*x + 1 : 0;        
-}
-
 size_t code_total_capacity(int format)
 {
-        /* XXX: figure out the "correct" formula */
-        return 160
-             +  25 * code_finder_count(format)
-             -  10 * (format / 7)
-             +   2 * code_side_length(format);
+	int side = format * 4 + 17;
+
+	int alignment_side = format > 1 ? (format / 7) + 2 : 0;
+
+	int alignment_count = alignment_side >= 2 ?
+		alignment_side * alignment_side - 3 : 0;
+
+	int locator_bits = 8*8*3;
+
+	int format_bits = 8*4 - 1 + (format >= 7 ? 6*3*2 : 0);
+
+	int timing_bits = 2 * (side - 8*2 -
+		(alignment_side > 2 ? (alignment_side - 2) * 5 : 0));
+
+	int function_bits = timing_bits + format_bits + locator_bits
+		+ alignment_count * 5*5;
+
+	return side * side - function_bits;
 }
 
