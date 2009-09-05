@@ -1,0 +1,203 @@
+/**
+ * It would perhaps be more sensible just to store the bits
+ * as an array of char or similar, but this way is more fun.
+ * This is a pretty inefficient implementation, althought I
+ * suspect that won't be a problem.
+ */
+
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <assert.h>
+
+#include "bitstream.h"
+
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+
+struct bitstream {
+        size_t pos;    /* bits */
+        size_t count;  /* bits */
+        size_t bufsiz; /* bytes */
+        unsigned char * buffer;
+};
+
+static size_t bits_to_bytes(size_t bits)
+{
+        return (bits / CHAR_BIT) + (bits % CHAR_BIT != 0);
+}
+
+static int ensure_available(struct bitstream * stream, size_t bits)
+{
+        size_t need_bits = stream->pos + bits;
+        size_t need_bytes = need_bits / CHAR_BIT + ((need_bits % CHAR_BIT) ? 0 : 1);
+        size_t newsize;
+
+        if (stream->bufsiz >= need_bytes)
+                return 0;
+
+        newsize = MAX(stream->bufsiz, 100);
+        while (newsize < need_bytes)
+                newsize *= 2;
+
+        return bitstream_resize(stream, newsize);
+}
+
+struct bitstream * bitstream_create(void)
+{
+        struct bitstream * obj;
+
+        obj = malloc(sizeof(*obj));
+
+        if (obj) {
+                obj->pos    = 0;
+                obj->count  = 0;
+                obj->bufsiz = 0;
+                obj->buffer = 0;
+        }
+
+        return obj;
+}
+
+int bitstream_resize(struct bitstream * stream, size_t bits)
+{
+        size_t newsize;
+        void * newbuf;
+
+        newsize = bits_to_bytes(bits);
+        newbuf = realloc(stream->buffer, newsize);
+
+        if (newbuf) {
+                stream->bufsiz = newsize;
+                stream->buffer = newbuf;
+        }
+
+        return newbuf ? 0 : -1;
+}
+
+void bitstream_destroy(struct bitstream * stream)
+{
+        free(stream->buffer);
+        free(stream);
+}
+
+struct bitstream * bitstream_copy(const struct bitstream * src)
+{
+        struct bitstream * ret;
+
+        ret = bitstream_create();
+        if (!ret)
+                return 0;
+
+        if (bitstream_resize(ret, src->count) != 0) {
+                free(ret);
+                return 0;
+        }
+
+        ret->pos   = src->pos;
+        ret->count = src->count;
+        memcpy(ret->buffer, src->buffer, src->bufsiz);
+
+        return ret;
+}
+
+void bitstream_seek(struct bitstream * stream, size_t pos)
+{
+        assert(pos <= stream->count);
+        stream->pos = pos;
+}
+
+size_t bitstream_tell(const struct bitstream * stream)
+{
+        return stream->pos;
+}
+
+size_t bitstream_remaining(const struct bitstream * stream)
+{
+        return stream->count - stream->pos;
+}
+
+size_t bitstream_size(const struct bitstream * stream)
+{
+        return stream->count;
+}
+
+unsigned int bitstream_read(struct bitstream * stream, size_t bits)
+{
+        unsigned int result = 0;
+        unsigned char * byte;
+        size_t bitnum;
+
+        assert(bitstream_remaining(stream) >= bits);
+
+        byte = stream->buffer + (stream->pos / CHAR_BIT);
+        bitnum = stream->pos % CHAR_BIT;
+
+        stream->pos += bits;
+
+        while (bits-- > 0) {
+                int bit = (*byte >> bitnum++) & 0x1;
+                result = (result << 1) | bit;
+                if (bitnum == CHAR_BIT) {
+                        bitnum = 0;
+                        ++byte;
+                }                
+        }
+
+        return result;
+}
+
+void bitstream_unpack(struct bitstream * stream,
+                      unsigned int *     result,
+                      size_t             count,
+                      size_t             bitsize)
+{
+        assert(bitstream_remaining(stream) >= (count * bitsize));
+
+        while (count--)
+                *(result++) = bitstream_read(stream, bitsize);
+}
+
+int bitstream_write(struct bitstream * stream,
+                    unsigned int       value,
+                    size_t             bits)
+{
+        unsigned char * byte;
+        size_t bitnum;
+
+        if (ensure_available(stream, bits) != 0)
+                return -1;
+
+        byte = stream->buffer + (stream->pos / CHAR_BIT);
+        bitnum = stream->pos % CHAR_BIT;
+
+        stream->pos += bits;
+        stream->count = stream->pos; /* truncate */
+
+        while (bits-- > 0) {
+                int bit = (value >> bits) & 0x1;
+                unsigned char mask = 1 << bitnum++;
+                *byte = (*byte & ~mask) | (bit ? mask : 0);
+                if (bitnum == CHAR_BIT) {
+                        bitnum = 0;
+                        ++byte;
+                }
+        }
+
+        return 0;
+}
+
+int bitstream_pack(struct bitstream *   stream,
+                   const unsigned int * values,
+                   size_t               count,
+                   size_t               bitsize)
+{
+        if (ensure_available(stream, count * bitsize) != 0)
+                return -1;
+
+        while (count--)
+                bitstream_write(stream, *(values++), bitsize);
+
+        return 0;
+}
+
