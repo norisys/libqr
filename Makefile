@@ -5,7 +5,8 @@ OBJECTS :=      bitstream.o     \
                 code-render.o   \
                 data-common.o   \
                 data-create.o   \
-                data-parse.o
+                data-parse.o	\
+                rs-encode.o
 
 CFLAGS := -std=c89 -pedantic -I. -Wall
 CFLAGS += -g

@@ -5,6 +5,7 @@
 #include <qr/data.h>
 
 #include "bitstream.h"
+#include "code-common.h"
 
 int main() {
 
