@@ -3,7 +3,7 @@
 
 #include "bitstream.h"
 
-struct bitstream * rs_generate_words(int k, const int * coeff, struct bitstream * data);
+struct bitstream * rs_generate_words(int n, struct bitstream * data);
 
 #endif
 

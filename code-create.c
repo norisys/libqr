@@ -31,13 +31,13 @@ static int add_ecc(struct bitstream * bits, int format, enum qr_ec_level ec)
         puts("Before ecc:");
         x_dump(bits);
         {
-                const int g[10] = { 251, 67, 61, 118, 70, 64, 94, 32, 45 };
                 int rs_words = 10; /* 1-M */
                 struct bitstream * rs;
 
-                rs = rs_generate_words(rs_words, g, bits);
+                rs = rs_generate_words(rs_words, bits);
                 puts("ecc part:");
                 x_dump(rs);
+                bitstream_destroy(rs);
         }
         return -1;
 }
