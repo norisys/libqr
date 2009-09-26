@@ -46,17 +46,17 @@ static unsigned int * make_generator(int k)
         return g;
 }
 
-struct bitstream * rs_generate_words(int n, struct bitstream * data)
+struct bitstream * rs_generate_words(struct bitstream * data,
+                                     size_t data_words,
+                                     size_t rs_words)
 {
         struct bitstream * ec = 0;
         unsigned int * b = 0;
         unsigned int * g;
-        size_t dlen;
+        size_t n = rs_words;
         int i, r;
 
-        dlen = bitstream_size(data);
-        assert(dlen % 8 == 0);
-        dlen /= 8;
+        assert(bitstream_remaining(data) >= data_words * 8);
 
         ec = bitstream_create();
         if (!ec)
@@ -75,7 +75,7 @@ struct bitstream * rs_generate_words(int n, struct bitstream * data)
 
         /* First, prepare the registers (b) with data bits */
         bitstream_seek(data, 0);
-        for (i = 0; i < dlen; ++i) {
+        for (i = 0; i < data_words; ++i) {
                 unsigned int x = b[n-1] ^ bitstream_read(data, 8);
                 for (r = n-1; r > 0; --r)
                         b[r] = b[r-1] ^ gf_mult(g[r], x);

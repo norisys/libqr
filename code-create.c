@@ -26,22 +26,6 @@ static void x_dump(struct bitstream * bits)
         printf("\n");
 }
 
-static int add_ecc(struct bitstream * bits, int format, enum qr_ec_level ec)
-{
-        puts("Before ecc:");
-        x_dump(bits);
-        {
-                int rs_words = 10; /* 1-M */
-                struct bitstream * rs;
-
-                rs = rs_generate_words(rs_words, bits);
-                puts("ecc part:");
-                x_dump(rs);
-                bitstream_destroy(rs);
-        }
-        return -1;
-}
-
 static int pad_data(struct bitstream * bits, size_t limit)
 {
         /* This function is not very nice. Sorry. */
@@ -86,23 +70,87 @@ static struct bitstream * make_data(int                format,
                                     enum qr_ec_level   ec,
                                     struct bitstream * data)
 {
-        size_t data_bits = 16 * 8 /*XXX*/;
-        struct bitstream * out;
+        const size_t total_bits = code_total_capacity(format);
+        const size_t total_words = total_bits / 8;
+        size_t block_count, data_words, rs_words;
+        size_t i;
+        struct bitstream * dcopy = 0;
+        struct bitstream * out = 0;
+        struct bitstream ** blocks = 0;
 
-        out = bitstream_copy(data);
+        /* Set up the output stream */
+        out = bitstream_create();
         if (!out)
                 return 0;
 
-        if (pad_data(out, data_bits) != 0)
+        if (bitstream_resize(out, total_bits) != 0)
                 goto fail;
 
-        if (add_ecc(out, format, ec) != 0)
+        /**
+         * XXX: For our test case (1-M) there is only one RS block.
+         * This is not the case for most other formats, so we'll
+         * have to deal with this eventually.
+         */
+        block_count = 1;
+        data_words = 16;
+        rs_words = 10;
+        assert(data_words + rs_words == total_words);
+
+        /* Make a copy of the data and pad it */
+        dcopy = bitstream_copy(data);
+        if (!dcopy)
                 goto fail;
+
+        if (pad_data(dcopy, data_words * 8) != 0)
+                goto fail;
+
+        puts("Pad data:");
+        x_dump(dcopy);
+
+        /* Make space for the RS blocks */
+        blocks = calloc(block_count, sizeof(*blocks));
+        if (!blocks)
+                goto fail;
+
+        /* Generate RS codewords */
+        bitstream_seek(dcopy, 0);
+        puts("Generate RS blocks:");
+        for (i = 0; i < block_count; ++i) {
+                /* XXX: some blocks may be longer */
+                blocks[i] = rs_generate_words(dcopy, data_words, rs_words);
+                if (!blocks[i]) {
+                        while (i--)
+                                bitstream_destroy(blocks[i]);
+                        free(blocks);
+                        blocks = 0;
+                        goto fail;
+                }
+                x_dump(blocks[i]);
+        }
+
+        /* Finally, write everything out in the correct order */
+        /* XXX: need to handle multiple blocks */
+        bitstream_cat(out, dcopy);
+        bitstream_cat(out, blocks[0]);
+        bitstream_write(out, 0, total_bits - total_words * 8);
+
+        puts("Final bitstream:");
+        x_dump(out);
+exit:
+        if (blocks) {
+                while (block_count--)
+                       bitstream_destroy(blocks[block_count]);
+                free(blocks);
+        }
+        if (dcopy)
+                bitstream_destroy(dcopy);
 
         return out;
+
 fail:
         bitstream_destroy(out);
-        return 0;
+        out = 0;
+        goto exit;
 }
 
 struct qr_code * qr_code_create(enum qr_ec_level       ec,
