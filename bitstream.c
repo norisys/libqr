@@ -201,3 +201,32 @@ int bitstream_pack(struct bitstream *   stream,
         return 0;
 }
 
+int bitstream_cat(struct bitstream * dest, const struct bitstream * src)
+{
+        size_t count = bitstream_size(src);
+        size_t srcpos;
+
+        if (ensure_available(dest, count) != 0)
+                return -1;
+
+        srcpos = bitstream_tell(src);
+        bitstream_seek((struct bitstream *)src, 0);
+
+        /* uint must be at least 16 bits */
+        for (; count >= 16; count -= 16)
+                bitstream_write(
+                        dest,
+                        bitstream_read((struct bitstream *)src, 16),
+                        16);
+
+        if (count > 0)
+                bitstream_write(
+                        dest,
+                        bitstream_read((struct bitstream *)src, count),
+                        count);
+
+        bitstream_seek((struct bitstream *)src, srcpos);
+
+        return 0;
+}
+
