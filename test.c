@@ -33,6 +33,21 @@ int main() {
 
         printf("Code width %d\n", qr_code_width(code));
 
+        {
+                /* Hack: render the code using ANSI terminal art */
+                char buf[80*25];
+                int x, y;
+
+                qr_code_render(code, buf, 8, 80, 0, 1, 0);
+                for (y=0;y<21;++y) {
+                        printf("\t|");
+                        for (x=0;x<21;++x) {
+                                printf("%s  ", buf[y*80+x]?"\033[7m":"\033[0m");
+                        }
+                        printf("\033[0m|\n");
+                }
+        }
+
 	return 0;
 }
 

@@ -4,6 +4,7 @@
 #include <qr/code.h>
 
 #include "code-common.h"
+#include "code-layout.h"
 #include "data-common.h"
 #include "rs.h"
 
@@ -24,6 +25,46 @@ static void x_dump(struct bitstream * bits)
                         printf("\n");
         }
         printf("\n");
+}
+
+static void setpx(struct qr_code * code, int x, int y)
+{
+        size_t off = y * code->line_stride + x / CHAR_BIT;
+        unsigned char bit = 1 << (x % CHAR_BIT);
+
+        code->modules[off] |= bit;
+}
+
+static void draw_locator(struct qr_code * code, int x, int y)
+{
+        int i;
+        for (i = 0; i < 6; ++i) {
+                setpx(code, x + i, y + 0);
+                setpx(code, x + 6, y + i);
+                setpx(code, x + i + 1, y + 6);
+                setpx(code, x, y + i + 1);
+        }
+        for (i = 0; i < 9; ++i)
+                setpx(code, x + 2 + i % 3, y + 2 + i / 3);
+}
+
+static void draw_fixed_bits(struct qr_code * code)
+{
+        int dim = code_side_length(code->format);
+        int i;
+
+        /* Locator pattern */
+        draw_locator(code, 0, 0);
+        draw_locator(code, 0, dim - 7);
+        draw_locator(code, dim - 7, 0);
+
+        /* Timing pattern */
+        for (i = 8; i < dim - 8; i += 2) {
+                setpx(code, i, 6);
+                setpx(code, 6, i);
+        }
+
+        /* XXX: alignment pattern */
 }
 
 static int pad_data(struct bitstream * bits, size_t limit)
@@ -157,22 +198,47 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
                                 const struct qr_data * data)
 {
         struct qr_code * code;
-        struct bitstream * ecdata;
+        struct bitstream * bits = 0;
+        struct qr_iterator * layout;
+        size_t dim;
 
         code = malloc(sizeof(*code));
         if (!code)
                 return 0;
 
+        dim = code_side_length(data->format);
+
         code->format = data->format;
-        ecdata = make_data(data->format, ec, data->bits);
+        code->line_stride = dim / CHAR_BIT + ((dim % CHAR_BIT) ? 1 : 0);
+        code->modules = calloc(dim * code->line_stride, sizeof(unsigned char));
 
-        if (!ecdata) {
-                free(code);
-                return 0;
-        }
+        if (!code->modules)
+                goto fail;
 
-        /* TODO: allocate bitmap; layout */
+        draw_fixed_bits(code);
 
-        return 0;
+        bits = make_data(data->format, ec, data->bits);
+        if (!bits)
+                goto fail;
+
+        layout = qr_layout_begin(code);
+        if (!layout)
+                goto fail;
+
+        bitstream_seek(bits, 0);
+        while (bitstream_remaining(bits) >= 8)
+                qr_layout_write(layout, bitstream_read(bits, 8));
+        qr_layout_end(layout);
+
+exit:
+        if (bits)
+                bitstream_destroy(bits);
+
+        return code;
+
+fail:
+        qr_code_destroy(code);
+        code = 0;
+        goto exit;
 }
 

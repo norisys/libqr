@@ -1,6 +1,7 @@
 OBJECTS :=      bitstream.o     \
                 code-common.o   \
                 code-create.o   \
+                code-layout.o   \
                 code-parse.o    \
                 code-render.o   \
                 data-common.o   \
