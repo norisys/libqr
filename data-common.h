@@ -3,11 +3,11 @@
 
 #include <qr/data.h>
 
-#include "bitstream.h"
+#include "qr-bitstream.h"
 
 struct qr_data {
         int                format; /* 1 ~ 40 */
-        struct bitstream * bits;
+        struct qr_bitstream * bits;
         size_t             offset;
 };
 

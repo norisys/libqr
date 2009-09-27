@@ -11,14 +11,14 @@
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
 
 #include <stdio.h>
-static void x_dump(struct bitstream * bits)
+static void x_dump(struct qr_bitstream * bits)
 {
         size_t i, n;
 
-        bitstream_seek(bits, 0);
-        n = bitstream_size(bits);
+        qr_bitstream_seek(bits, 0);
+        n = qr_bitstream_size(bits);
         for (i = 0; i < n; ++i) {
-                printf("%d", bitstream_read(bits, 1));
+                printf("%d", qr_bitstream_read(bits, 1));
                 if (i % 8 == 7)
                         printf(" ");
                 if ((i+1) % (7 * 8) == 0)
@@ -67,19 +67,19 @@ static void draw_fixed_bits(struct qr_code * code)
         /* XXX: alignment pattern */
 }
 
-static int pad_data(struct bitstream * bits, size_t limit)
+static int pad_data(struct qr_bitstream * bits, size_t limit)
 {
         /* This function is not very nice. Sorry. */
 
         size_t count, n;
 
-        assert(bitstream_size(bits) <= limit);
+        assert(qr_bitstream_size(bits) <= limit);
 
-        if (bitstream_resize(bits, limit) != 0)
+        if (qr_bitstream_resize(bits, limit) != 0)
                 return -1;
 
-        n = bitstream_size(bits);
-        bitstream_seek(bits, n);
+        n = qr_bitstream_size(bits);
+        qr_bitstream_seek(bits, n);
         count = limit - n;
 
         /* First append the terminator (0000) if possible,
@@ -89,42 +89,42 @@ static int pad_data(struct bitstream * bits, size_t limit)
         if (n != 0)
                 n = 8 - n;
         n = MIN(count, n + 4);
-        bitstream_write(bits, 0, n);
+        qr_bitstream_write(bits, 0, n);
         count -= n;
 
         assert(count % 8 == 0); /* since data codewords are 8 bits */
 
         /* Finally pad with the repeating sequence 11101100 00010001 */
         while (count >= 16) {
-                bitstream_write(bits, 0xEC11, 16);
+                qr_bitstream_write(bits, 0xEC11, 16);
                 count -= 16;
         }
         if (count > 0) {
                 assert(count == 8);
-                bitstream_write(bits, 0xEC, 8);
+                qr_bitstream_write(bits, 0xEC, 8);
         }
 
         return 0;
 }
 
-static struct bitstream * make_data(int                format,
+static struct qr_bitstream * make_data(int                format,
                                     enum qr_ec_level   ec,
-                                    struct bitstream * data)
+                                    struct qr_bitstream * data)
 {
         const size_t total_bits = code_total_capacity(format);
         const size_t total_words = total_bits / 8;
         size_t block_count, data_words, rs_words;
         size_t i;
-        struct bitstream * dcopy = 0;
-        struct bitstream * out = 0;
-        struct bitstream ** blocks = 0;
+        struct qr_bitstream * dcopy = 0;
+        struct qr_bitstream * out = 0;
+        struct qr_bitstream ** blocks = 0;
 
         /* Set up the output stream */
-        out = bitstream_create();
+        out = qr_bitstream_create();
         if (!out)
                 return 0;
 
-        if (bitstream_resize(out, total_bits) != 0)
+        if (qr_bitstream_resize(out, total_bits) != 0)
                 goto fail;
 
         /**
@@ -138,7 +138,7 @@ static struct bitstream * make_data(int                format,
         assert(data_words + rs_words == total_words);
 
         /* Make a copy of the data and pad it */
-        dcopy = bitstream_copy(data);
+        dcopy = qr_bitstream_copy(data);
         if (!dcopy)
                 goto fail;
 
@@ -154,14 +154,14 @@ static struct bitstream * make_data(int                format,
                 goto fail;
 
         /* Generate RS codewords */
-        bitstream_seek(dcopy, 0);
+        qr_bitstream_seek(dcopy, 0);
         puts("Generate RS blocks:");
         for (i = 0; i < block_count; ++i) {
                 /* XXX: some blocks may be longer */
                 blocks[i] = rs_generate_words(dcopy, data_words, rs_words);
                 if (!blocks[i]) {
                         while (i--)
-                                bitstream_destroy(blocks[i]);
+                                qr_bitstream_destroy(blocks[i]);
                         free(blocks);
                         blocks = 0;
                         goto fail;
@@ -171,25 +171,25 @@ static struct bitstream * make_data(int                format,
 
         /* Finally, write everything out in the correct order */
         /* XXX: need to handle multiple blocks */
-        bitstream_cat(out, dcopy);
-        bitstream_cat(out, blocks[0]);
-        bitstream_write(out, 0, total_bits - total_words * 8);
+        qr_bitstream_cat(out, dcopy);
+        qr_bitstream_cat(out, blocks[0]);
+        qr_bitstream_write(out, 0, total_bits - total_words * 8);
 
         puts("Final bitstream:");
         x_dump(out);
 exit:
         if (blocks) {
                 while (block_count--)
-                       bitstream_destroy(blocks[block_count]);
+                       qr_bitstream_destroy(blocks[block_count]);
                 free(blocks);
         }
         if (dcopy)
-                bitstream_destroy(dcopy);
+                qr_bitstream_destroy(dcopy);
 
         return out;
 
 fail:
-        bitstream_destroy(out);
+        qr_bitstream_destroy(out);
         out = 0;
         goto exit;
 }
@@ -198,7 +198,7 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
                                 const struct qr_data * data)
 {
         struct qr_code * code;
-        struct bitstream * bits = 0;
+        struct qr_bitstream * bits = 0;
         struct qr_iterator * layout;
         size_t dim;
 
@@ -224,14 +224,14 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         if (!layout)
                 goto fail;
 
-        bitstream_seek(bits, 0);
-        while (bitstream_remaining(bits) >= 8)
-                qr_layout_write(layout, bitstream_read(bits, 8));
+        qr_bitstream_seek(bits, 0);
+        while (qr_bitstream_remaining(bits) >= 8)
+                qr_layout_write(layout, qr_bitstream_read(bits, 8));
         qr_layout_end(layout);
 
 exit:
         if (bits)
-                bitstream_destroy(bits);
+                qr_bitstream_destroy(bits);
 
         return code;
 

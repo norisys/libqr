@@ -1,5 +1,4 @@
-OBJECTS :=      bitstream.o     \
-                code-common.o   \
+OBJECTS :=      code-common.o           \
                 code-create.o   \
                 code-layout.o   \
                 code-parse.o    \
@@ -9,6 +8,7 @@ OBJECTS :=      bitstream.o     \
                 qr-bitmap.o             \
                 qr-bitmap-pbm.o         \
                 qr-bitmap-render.o      \
+                qr-bitstream.o          \
                 rs-encode.o
 
 CFLAGS := -std=c89 -pedantic -I. -Wall

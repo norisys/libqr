@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <qr/data.h>
 
-#include "bitstream.h"
+#include "qr-bitstream.h"
 #include "data-common.h"
 
 const enum qr_data_type QR_TYPE_CODES[16] = {
@@ -25,7 +25,7 @@ const enum qr_data_type QR_TYPE_CODES[16] = {
 
 void qr_free_data(struct qr_data * data)
 {
-        bitstream_destroy(data->bits);
+        qr_bitstream_destroy(data->bits);
         free(data);
 }
 

@@ -2,7 +2,7 @@
 #define CODE_COMMON_H
 
 #include <qr/code.h>
-#include "bitstream.h"
+#include "qr-bitstream.h"
 #include "qr-bitmap.h"
 
 struct qr_code {

@@ -4,7 +4,7 @@
 #include <qr/code.h>
 #include <qr/data.h>
 
-#include "bitstream.h"
+#include "qr-bitstream.h"
 #include "code-common.h"
 
 int main() {

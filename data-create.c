@@ -9,15 +9,15 @@
 #include <stdlib.h>
 #include <qr/data.h>
 
-#include "bitstream.h"
+#include "qr-bitstream.h"
 #include "data-common.h"
 
 static void write_type_and_length(struct qr_data *  data,
                                   enum qr_data_type type,
                                   size_t            length)
 {
-        (void)bitstream_write(data->bits, QR_TYPE_CODES[type], 4);
-        (void)bitstream_write(data->bits, length,
+        (void)qr_bitstream_write(data->bits, QR_TYPE_CODES[type], 4);
+        (void)qr_bitstream_write(data->bits, length,
                 get_size_field_length(data->format, type));
 }
 
@@ -25,7 +25,7 @@ static struct qr_data * encode_numeric(struct qr_data * data,
                                        const char *     input,
                                        size_t           length)
 {
-        struct bitstream * stream = data->bits;
+        struct qr_bitstream * stream = data->bits;
         size_t bits;
 
         bits = 4 + get_size_field_length(data->format, QR_DATA_NUMERIC)
@@ -37,8 +37,8 @@ static struct qr_data * encode_numeric(struct qr_data * data,
                 bits += 7;
 
         stream = data->bits;
-        if (bitstream_resize(stream,
-                        bitstream_size(stream) + bits) != 0)
+        if (qr_bitstream_resize(stream,
+                        qr_bitstream_size(stream) + bits) != 0)
                 return 0;
 
         write_type_and_length(data, QR_DATA_NUMERIC, length);
@@ -54,7 +54,7 @@ static struct qr_data * encode_numeric(struct qr_data * data,
                 x = (input[0] - '0') * 100
                   + (input[1] - '0') * 10
                   + (input[2] - '0');
-                bitstream_write(stream, x, 10);
+                qr_bitstream_write(stream, x, 10);
                 input += 3;
         }
 
@@ -72,7 +72,7 @@ static struct qr_data * encode_numeric(struct qr_data * data,
                         x = x * 10 + (*input - '0');
                 }
 
-                bitstream_write(stream, x, length == 2 ? 7 : 4);
+                qr_bitstream_write(stream, x, length == 2 ? 7 : 4);
         }
 
         return data;
@@ -103,7 +103,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
                                      const char *     input,
                                      size_t           length)
 {
-        struct bitstream * stream = data->bits;
+        struct qr_bitstream * stream = data->bits;
         size_t bits;
 
         bits = 4 + get_size_field_length(data->format, QR_DATA_ALPHA)
@@ -111,8 +111,8 @@ static struct qr_data * encode_alpha(struct qr_data * data,
                  + 6 * (length % 2);
 
         stream = data->bits;
-        if (bitstream_resize(stream,
-                        bitstream_size(stream) + bits) != 0)
+        if (qr_bitstream_resize(stream,
+                        qr_bitstream_size(stream) + bits) != 0)
                 return 0;
 
         write_type_and_length(data, QR_DATA_ALPHA, length);
@@ -128,7 +128,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
                         return 0;
 
                 x = c1 * 45 + c2;
-                bitstream_write(stream, x, 11);
+                qr_bitstream_write(stream, x, 11);
         }
 
         if (length > 0) {
@@ -137,7 +137,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
                 if (c < 0)
                         return 0;
 
-                bitstream_write(stream, c, 6);
+                qr_bitstream_write(stream, c, 6);
         }
 
         return data;
@@ -147,21 +147,21 @@ static struct qr_data * encode_8bit(struct qr_data * data,
                                     const char *     input,
                                     size_t           length)
 {
-        struct bitstream * stream = data->bits;
+        struct qr_bitstream * stream = data->bits;
         size_t bits;
 
         bits = 4 + get_size_field_length(data->format, QR_DATA_8BIT)
                  + 8 * length;
 
         stream = data->bits;
-        if (bitstream_resize(stream,
-                        bitstream_size(stream) + bits) != 0)
+        if (qr_bitstream_resize(stream,
+                        qr_bitstream_size(stream) + bits) != 0)
                 return 0;
 
         write_type_and_length(data, QR_DATA_8BIT, length);
 
         while (length--)
-                bitstream_write(stream, *input++, 8);
+                qr_bitstream_write(stream, *input++, 8);
 
         return data;
 }
@@ -188,7 +188,7 @@ struct qr_data * qr_create_data(int               format,
                 return 0;
 
         data->format = format;
-        data->bits   = bitstream_create();
+        data->bits   = qr_bitstream_create();
         data->offset = 0;
 
         if (data->bits) {
@@ -210,7 +210,7 @@ struct qr_data * qr_create_data(int               format,
                 }
 
                 if (!ret) {
-                        bitstream_destroy(data->bits);
+                        qr_bitstream_destroy(data->bits);
                         free(data);
                 }
 

@@ -10,12 +10,12 @@
 #include <limits.h>
 #include <assert.h>
 
-#include "bitstream.h"
+#include "qr-bitstream.h"
 
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 
-struct bitstream {
+struct qr_bitstream {
         size_t pos;    /* bits */
         size_t count;  /* bits */
         size_t bufsiz; /* bytes */
@@ -27,7 +27,7 @@ static size_t bits_to_bytes(size_t bits)
         return (bits / CHAR_BIT) + (bits % CHAR_BIT != 0);
 }
 
-static int ensure_available(struct bitstream * stream, size_t bits)
+static int ensure_available(struct qr_bitstream * stream, size_t bits)
 {
         size_t need_bits = stream->pos + bits;
         size_t need_bytes = need_bits / CHAR_BIT + ((need_bits % CHAR_BIT) ? 0 : 1);
@@ -40,12 +40,12 @@ static int ensure_available(struct bitstream * stream, size_t bits)
         while (newsize < need_bytes)
                 newsize *= 2;
 
-        return bitstream_resize(stream, newsize);
+        return qr_bitstream_resize(stream, newsize);
 }
 
-struct bitstream * bitstream_create(void)
+struct qr_bitstream * qr_bitstream_create(void)
 {
-        struct bitstream * obj;
+        struct qr_bitstream * obj;
 
         obj = malloc(sizeof(*obj));
 
@@ -59,7 +59,7 @@ struct bitstream * bitstream_create(void)
         return obj;
 }
 
-int bitstream_resize(struct bitstream * stream, size_t bits)
+int qr_bitstream_resize(struct qr_bitstream * stream, size_t bits)
 {
         size_t newsize;
         void * newbuf;
@@ -75,21 +75,21 @@ int bitstream_resize(struct bitstream * stream, size_t bits)
         return newbuf ? 0 : -1;
 }
 
-void bitstream_destroy(struct bitstream * stream)
+void qr_bitstream_destroy(struct qr_bitstream * stream)
 {
         free(stream->buffer);
         free(stream);
 }
 
-struct bitstream * bitstream_copy(const struct bitstream * src)
+struct qr_bitstream * qr_bitstream_copy(const struct qr_bitstream * src)
 {
-        struct bitstream * ret;
+        struct qr_bitstream * ret;
 
-        ret = bitstream_create();
+        ret = qr_bitstream_create();
         if (!ret)
                 return 0;
 
-        if (bitstream_resize(ret, src->count) != 0) {
+        if (qr_bitstream_resize(ret, src->count) != 0) {
                 free(ret);
                 return 0;
         }
@@ -101,34 +101,34 @@ struct bitstream * bitstream_copy(const struct bitstream * src)
         return ret;
 }
 
-void bitstream_seek(struct bitstream * stream, size_t pos)
+void qr_bitstream_seek(struct qr_bitstream * stream, size_t pos)
 {
         assert(pos <= stream->count);
         stream->pos = pos;
 }
 
-size_t bitstream_tell(const struct bitstream * stream)
+size_t qr_bitstream_tell(const struct qr_bitstream * stream)
 {
         return stream->pos;
 }
 
-size_t bitstream_remaining(const struct bitstream * stream)
+size_t qr_bitstream_remaining(const struct qr_bitstream * stream)
 {
         return stream->count - stream->pos;
 }
 
-size_t bitstream_size(const struct bitstream * stream)
+size_t qr_bitstream_size(const struct qr_bitstream * stream)
 {
         return stream->count;
 }
 
-unsigned int bitstream_read(struct bitstream * stream, size_t bits)
+unsigned int qr_bitstream_read(struct qr_bitstream * stream, size_t bits)
 {
         unsigned int result = 0;
         unsigned char * byte;
         size_t bitnum;
 
-        assert(bitstream_remaining(stream) >= bits);
+        assert(qr_bitstream_remaining(stream) >= bits);
 
         byte = stream->buffer + (stream->pos / CHAR_BIT);
         bitnum = stream->pos % CHAR_BIT;
@@ -147,18 +147,18 @@ unsigned int bitstream_read(struct bitstream * stream, size_t bits)
         return result;
 }
 
-void bitstream_unpack(struct bitstream * stream,
+void qr_bitstream_unpack(struct qr_bitstream * stream,
                       unsigned int *     result,
                       size_t             count,
                       size_t             bitsize)
 {
-        assert(bitstream_remaining(stream) >= (count * bitsize));
+        assert(qr_bitstream_remaining(stream) >= (count * bitsize));
 
         while (count--)
-                *(result++) = bitstream_read(stream, bitsize);
+                *(result++) = qr_bitstream_read(stream, bitsize);
 }
 
-int bitstream_write(struct bitstream * stream,
+int qr_bitstream_write(struct qr_bitstream * stream,
                     unsigned int       value,
                     size_t             bits)
 {
@@ -187,7 +187,7 @@ int bitstream_write(struct bitstream * stream,
         return 0;
 }
 
-int bitstream_pack(struct bitstream *   stream,
+int qr_bitstream_pack(struct qr_bitstream *   stream,
                    const unsigned int * values,
                    size_t               count,
                    size_t               bitsize)
@@ -196,36 +196,36 @@ int bitstream_pack(struct bitstream *   stream,
                 return -1;
 
         while (count--)
-                bitstream_write(stream, *(values++), bitsize);
+                qr_bitstream_write(stream, *(values++), bitsize);
 
         return 0;
 }
 
-int bitstream_cat(struct bitstream * dest, const struct bitstream * src)
+int qr_bitstream_cat(struct qr_bitstream * dest, const struct qr_bitstream * src)
 {
-        size_t count = bitstream_size(src);
+        size_t count = qr_bitstream_size(src);
         size_t srcpos;
 
         if (ensure_available(dest, count) != 0)
                 return -1;
 
-        srcpos = bitstream_tell(src);
-        bitstream_seek((struct bitstream *)src, 0);
+        srcpos = qr_bitstream_tell(src);
+        qr_bitstream_seek((struct qr_bitstream *)src, 0);
 
         /* uint must be at least 16 bits */
         for (; count >= 16; count -= 16)
-                bitstream_write(
+                qr_bitstream_write(
                         dest,
-                        bitstream_read((struct bitstream *)src, 16),
+                        qr_bitstream_read((struct qr_bitstream *)src, 16),
                         16);
 
         if (count > 0)
-                bitstream_write(
+                qr_bitstream_write(
                         dest,
-                        bitstream_read((struct bitstream *)src, count),
+                        qr_bitstream_read((struct qr_bitstream *)src, count),
                         count);
 
-        bitstream_seek((struct bitstream *)src, srcpos);
+        qr_bitstream_seek((struct qr_bitstream *)src, srcpos);
 
         return 0;
 }
