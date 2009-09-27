@@ -2,11 +2,14 @@
 #include <qr/code.h>
 
 #include "code-common.h"
+#include "qr-bitmap.h"
 
 void qr_code_destroy(struct qr_code * code)
 {
-        free(code->modules);
-        free(code);
+        if (code) {
+                qr_bitmap_destroy(code->modules);
+                free(code);
+        }
 }
 
 int qr_code_width(const struct qr_code * code)

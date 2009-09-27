@@ -38,7 +38,7 @@ int main() {
                 char buf[80*25];
                 int x, y;
 
-                qr_code_render(code, buf, 8, 80, 0, 1, 0);
+                qr_bitmap_render(code->modules, buf, 8, 80, 0, 1, 0);
                 for (y=0;y<21;++y) {
                         printf("\t|");
                         for (x=0;x<21;++x) {

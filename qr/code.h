@@ -23,13 +23,5 @@ struct qr_code * qr_code_parse(const void * buffer,
                                size_t       line_stride,
                                size_t       line_count);
 
-void qr_code_render(const struct qr_code * code,
-                    void *                 buffer,
-                    size_t                 mod_bits,
-                    size_t                 line_stride,
-                    size_t                 line_repeat,
-                    unsigned long          mark,
-                    unsigned long          space);
-
 #endif
 

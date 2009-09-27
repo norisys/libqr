@@ -3,10 +3,12 @@ OBJECTS :=      bitstream.o     \
                 code-create.o   \
                 code-layout.o   \
                 code-parse.o    \
-                code-render.o   \
                 data-common.o   \
                 data-create.o   \
                 data-parse.o	\
+                qr-bitmap.o             \
+                qr-bitmap-pbm.o         \
+                qr-bitmap-render.o      \
                 rs-encode.o
 
 CFLAGS := -std=c89 -pedantic -I. -Wall

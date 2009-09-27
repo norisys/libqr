@@ -29,10 +29,10 @@ static void x_dump(struct bitstream * bits)
 
 static void setpx(struct qr_code * code, int x, int y)
 {
-        size_t off = y * code->line_stride + x / CHAR_BIT;
+        size_t off = y * code->modules->stride + x / CHAR_BIT;
         unsigned char bit = 1 << (x % CHAR_BIT);
 
-        code->modules[off] |= bit;
+        code->modules->bits[off] |= bit;
 }
 
 static void draw_locator(struct qr_code * code, int x, int y)
@@ -209,8 +209,7 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         dim = code_side_length(data->format);
 
         code->format = data->format;
-        code->line_stride = dim / CHAR_BIT + ((dim % CHAR_BIT) ? 1 : 0);
-        code->modules = calloc(dim * code->line_stride, sizeof(unsigned char));
+        code->modules = qr_bitmap_create(dim, dim, 0);
 
         if (!code->modules)
                 goto fail;

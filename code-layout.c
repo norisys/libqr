@@ -36,8 +36,8 @@ static int is_data_bit(const struct qr_iterator * i)
 static void set_pointer(struct qr_iterator * i)
 {
         i->mask = 1 << (i->column % CHAR_BIT);
-        i->p = i->code->modules
-                + i->code->line_stride * i->row
+        i->p = i->code->modules->bits
+                + i->code->modules->stride * i->row
                 + i->column / CHAR_BIT;
 }
 

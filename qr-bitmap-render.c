@@ -1,9 +1,8 @@
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
-#include <qr/code.h>
 
-#include "code-common.h"
+#include "qr-bitmap.h"
 
 /* CHAR_BIT | mod_bits  (multi-byte) */
 static void render_line_1(unsigned char *       out,
@@ -74,13 +73,13 @@ static void render_line_2(unsigned char *       out,
         }
 }
 
-void qr_code_render(const struct qr_code * code,
-                    void *                 buffer,
-                    size_t                 mod_bits,
-                    size_t                 line_stride,
-                    size_t                 line_repeat,
-                    unsigned long          mark,
-                    unsigned long          space)
+void qr_bitmap_render(const struct qr_bitmap * bmp,
+                      void *                   buffer,
+                      size_t                   mod_bits,
+                      size_t                   line_stride,
+                      size_t                   line_repeat,
+                      unsigned long            mark,
+                      unsigned long            space)
 {
         unsigned char * out;
         const unsigned char * in;
@@ -91,9 +90,9 @@ void qr_code_render(const struct qr_code * code,
         assert(!pack || (CHAR_BIT % mod_bits == 0));
         assert( pack || (mod_bits % CHAR_BIT == 0));
 
-        in = code->modules;
+        in = bmp->bits;
         out = buffer;
-        dim = qr_code_width(code);
+        dim = bmp->width;
 
         n = dim;
         while (n-- > 0) {
@@ -112,7 +111,7 @@ void qr_code_render(const struct qr_code * code,
                         next += line_stride;
                 }
 
-                in += code->line_stride;
+                in += bmp->stride;
                 out = next;
         }
 }

@@ -3,11 +3,11 @@
 
 #include <qr/code.h>
 #include "bitstream.h"
+#include "qr-bitmap.h"
 
 struct qr_code {
-        int              format;
-        unsigned char *  modules;
-        size_t           line_stride;
+        int                format;
+        struct qr_bitmap * modules;
 };
 
 int code_side_length(int format);
