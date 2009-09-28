@@ -1,7 +1,10 @@
+#include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 #include "code-common.h"
 #include "code-layout.h"
+#include "qr-bitmap.h"
 
 struct qr_iterator {
         struct qr_code * code;
@@ -13,24 +16,49 @@ struct qr_iterator {
         unsigned char * p;
 };
 
+void qr_layout_init_mask(struct qr_code * code)
+{
+        int x, y;
+        int dim = code_side_length(code->format);
+        struct qr_bitmap * bmp = code->modules;
+
+        assert(bmp->mask);
+
+        memset(bmp->mask, 0, bmp->height * bmp->stride);
+
+        /* slow and stupid, but I'm sleepy */
+        for (y = 0; y < bmp->height; ++y) {
+                unsigned char * row = bmp->mask + y * bmp->stride;
+                for (x = 0; x < bmp->width; ++x) {
+                        unsigned char bit = 1 << (x % CHAR_BIT);
+                        int off = x / CHAR_BIT;
+
+                        if (x == 6 || y == 6) /* timing */
+                                continue;
+
+                        if (x < 9 && y < 9) /* top-left */
+                                continue;
+
+                        if (x >= dim - 8 && y < 9) /* top-right */
+                                continue;
+
+                        if (x < 9 && y >= dim - 8) /* bottom-left */
+                                continue;
+
+                        /* XXX: format data */
+                        /* XXX: alignment pattern */
+
+                        row[off] |= bit;
+                }
+        }
+}
+
 static int is_data_bit(const struct qr_iterator * i)
 {
-        if (i->row == 6 || i->column == 6) /* timing */
-                return 0;
+        unsigned char bit = 1 << (i->column % CHAR_BIT);
+        int off = (i->row * i->code->modules->stride) + (i->column / CHAR_BIT);
 
-        if (i->column < 9 && i->row < 9) /* top-left */
-                return 0;
-
-        if (i->column >= i->dim - 8 && i->row < 9) /* top-right */
-                return 0;
-
-        if (i->column < 9 && i->row >= i->dim - 8) /* bottom-left */
-                return 0;
-
-        /* XXX: format data */
-        /* XXX: alignment pattern */
-
-        return 1;
+        return i->code->modules->mask[off] & bit;
 }
 
 static void set_pointer(struct qr_iterator * i)

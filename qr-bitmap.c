@@ -29,7 +29,7 @@ struct qr_bitmap * qr_bitmap_create(int width, int height, int masked)
                 out->mask = malloc(out->stride * width);
                 if (!out->mask)
                         goto fail;
-                memset(out->bits, 0xFF, size);
+                memset(out->mask, 0xFF, size);
         }
 
         return out;

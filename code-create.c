@@ -6,9 +6,14 @@
 #include "code-common.h"
 #include "code-layout.h"
 #include "data-common.h"
+#include "qr-mask.h"
 #include "rs.h"
 
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
+
+/* FIXME: the static functions should be in a better
+ * order, with prototypes.
+ */
 
 #include <stdio.h>
 static void x_dump(struct qr_bitstream * bits)
@@ -27,44 +32,64 @@ static void x_dump(struct qr_bitstream * bits)
         printf("\n");
 }
 
-static void setpx(struct qr_code * code, int x, int y)
+static int mask_data(struct qr_code * code)
 {
-        size_t off = y * code->modules->stride + x / CHAR_BIT;
-        unsigned char bit = 1 << (x % CHAR_BIT);
-
-        code->modules->bits[off] |= bit;
+        /* XXX */
+        code->modules = qr_mask_apply(code->modules, 2);
+        return 2;
 }
 
-static void draw_locator(struct qr_code * code, int x, int y)
+static void setpx(struct qr_bitmap * bmp, int x, int y)
+{
+        size_t off = y * bmp->stride + x / CHAR_BIT;
+        unsigned char bit = 1 << (x % CHAR_BIT);
+
+        bmp->bits[off] |= bit;
+}
+
+static void draw_locator(struct qr_bitmap * bmp, int x, int y)
 {
         int i;
         for (i = 0; i < 6; ++i) {
-                setpx(code, x + i, y + 0);
-                setpx(code, x + 6, y + i);
-                setpx(code, x + i + 1, y + 6);
-                setpx(code, x, y + i + 1);
+                setpx(bmp, x + i, y + 0);
+                setpx(bmp, x + 6, y + i);
+                setpx(bmp, x + i + 1, y + 6);
+                setpx(bmp, x, y + i + 1);
         }
         for (i = 0; i < 9; ++i)
-                setpx(code, x + 2 + i % 3, y + 2 + i / 3);
+                setpx(bmp, x + 2 + i % 3, y + 2 + i / 3);
 }
 
-static void draw_fixed_bits(struct qr_code * code)
+static int draw_functional(struct qr_code * code,
+                           unsigned int mask)
 {
+        struct qr_bitmap * bmp;
         int dim = code_side_length(code->format);
         int i;
 
+        bmp = qr_bitmap_create(dim, dim, 0);
+        if (!bmp)
+                return -1;
+
         /* Locator pattern */
-        draw_locator(code, 0, 0);
-        draw_locator(code, 0, dim - 7);
-        draw_locator(code, dim - 7, 0);
+        draw_locator(bmp, 0, 0);
+        draw_locator(bmp, 0, dim - 7);
+        draw_locator(bmp, dim - 7, 0);
 
         /* Timing pattern */
         for (i = 8; i < dim - 8; i += 2) {
-                setpx(code, i, 6);
-                setpx(code, 6, i);
+                setpx(bmp, i, 6);
+                setpx(bmp, 6, i);
         }
 
         /* XXX: alignment pattern */
+        /* XXX: mask, format info */
+
+        qr_bitmap_merge(bmp, code->modules);
+        qr_bitmap_destroy(code->modules);
+        code->modules = bmp;
+
+        return 0;
 }
 
 static int pad_data(struct qr_bitstream * bits, size_t limit)
@@ -200,6 +225,7 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         struct qr_code * code;
         struct qr_bitstream * bits = 0;
         struct qr_iterator * layout;
+        int mask;
         size_t dim;
 
         code = malloc(sizeof(*code));
@@ -209,16 +235,16 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         dim = code_side_length(data->format);
 
         code->format = data->format;
-        code->modules = qr_bitmap_create(dim, dim, 0);
+        code->modules = qr_bitmap_create(dim, dim, 1);
 
         if (!code->modules)
                 goto fail;
 
-        draw_fixed_bits(code);
-
         bits = make_data(data->format, ec, data->bits);
         if (!bits)
                 goto fail;
+
+        qr_layout_init_mask(code);
 
         layout = qr_layout_begin(code);
         if (!layout)
@@ -228,6 +254,13 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         while (qr_bitstream_remaining(bits) >= 8)
                 qr_layout_write(layout, qr_bitstream_read(bits, 8));
         qr_layout_end(layout);
+
+        mask = mask_data(code);
+        if (mask < 0)
+                goto fail;
+
+        if (draw_functional(code, mask) != 0)
+                goto fail;
 
 exit:
         if (bits)
