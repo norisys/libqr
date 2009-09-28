@@ -9,6 +9,7 @@ OBJECTS :=      code-common.o           \
                 qr-bitmap-pbm.o         \
                 qr-bitmap-render.o      \
                 qr-bitstream.o          \
+                qr-mask.o               \
                 rs-encode.o
 
 CFLAGS := -std=c89 -pedantic -I. -Wall

@@ -11,6 +11,8 @@ struct qr_bitmap {
 struct qr_bitmap * qr_bitmap_create(int width, int height, int masked);
 void qr_bitmap_destroy(struct qr_bitmap *);
 
+struct qr_bitmap * qr_bitmap_clone(const struct qr_bitmap *);
+
 void qr_bitmap_merge(struct qr_bitmap * dest, const struct qr_bitmap * src);
 
 void qr_bitmap_render(const struct qr_bitmap * bmp,

@@ -48,6 +48,25 @@ void qr_bitmap_destroy(struct qr_bitmap * bmp)
         }
 }
 
+struct qr_bitmap * qr_bitmap_clone(const struct qr_bitmap * src)
+{
+        struct qr_bitmap * bmp;
+        size_t size;
+
+        bmp = qr_bitmap_create(src->width, src->height, !!src->mask);
+        if (!bmp)
+                return 0;
+
+        assert(bmp->stride == src->stride);
+
+        size = bmp->width * bmp->stride;
+        memcpy(bmp->bits, src->bits, size);
+        if (bmp->mask)
+                memcpy(bmp->mask, src->mask, size);
+
+        return bmp;
+}
+
 void qr_bitmap_merge(struct qr_bitmap * dest, const struct qr_bitmap * src)
 {
         unsigned char * d, * s, * m;
