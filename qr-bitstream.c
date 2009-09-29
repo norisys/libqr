@@ -30,14 +30,13 @@ static size_t bits_to_bytes(size_t bits)
 static int ensure_available(struct qr_bitstream * stream, size_t bits)
 {
         size_t need_bits = stream->pos + bits;
-        size_t need_bytes = need_bits / CHAR_BIT + ((need_bits % CHAR_BIT) ? 0 : 1);
         size_t newsize;
 
-        if (stream->bufsiz >= need_bytes)
+        if (stream->bufsiz * CHAR_BIT >= need_bits)
                 return 0;
 
-        newsize = MAX(stream->bufsiz, 100);
-        while (newsize < need_bytes)
+        newsize = MAX(stream->bufsiz, 100) * CHAR_BIT;
+        while (newsize < need_bits)
                 newsize *= 2;
 
         return qr_bitstream_resize(stream, newsize);
