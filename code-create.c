@@ -11,6 +11,15 @@
 
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
 
+static int mask_data(struct qr_code * code);
+static int score_mask(const struct qr_bitmap * bmp);
+static int score_runs(const struct qr_bitmap * bmp, int base);
+static int count_2blocks(const struct qr_bitmap * bmp);
+static int count_locators(const struct qr_bitmap * bmp);
+static int calc_bw_balance(const struct qr_bitmap * bmp);
+static int get_px(const struct qr_bitmap * bmp, int x, int y);
+static int get_mask(const struct qr_bitmap * bmp, int x, int y);
+
 /* FIXME: the static functions should be in a better
  * order, with prototypes.
  */
@@ -30,13 +39,6 @@ static void x_dump(struct qr_bitstream * bits)
                         printf("\n");
         }
         printf("\n");
-}
-
-static int mask_data(struct qr_code * code)
-{
-        /* XXX */
-        code->modules = qr_mask_apply(code->modules, 2);
-        return 2;
 }
 
 static void setpx(struct qr_bitmap * bmp, int x, int y)
@@ -272,5 +274,195 @@ fail:
         qr_code_destroy(code);
         code = 0;
         goto exit;
+}
+
+static int mask_data(struct qr_code * code)
+{
+        struct qr_bitmap * mask, * test;
+        int selected, score;
+        int i, best;
+
+        mask = 0;
+
+        /* Generate bitmap for each mask and evaluate */
+        for (i = 0; i < 8; ++i) {
+                test = qr_mask_apply(code->modules, i);
+                if (!test) {
+                        qr_bitmap_destroy(mask);
+                        return -1;
+                }
+                score = score_mask(test);
+                printf("mask %d scored %d\n", i, score);
+                if (!mask || score < best) {
+                        best = score;
+                        selected = i;
+                        qr_bitmap_destroy(mask);
+                        mask = test;
+                } else {
+                        qr_bitmap_destroy(test);
+                }
+        }
+        printf("Selected mask %d (%d)\n", selected, best);
+
+        qr_bitmap_destroy(code->modules);
+        code->modules = mask;
+
+        return selected;
+}
+
+static int score_mask(const struct qr_bitmap * bmp)
+{
+        const int N[4] = { 3, 3, 40, 10 };
+        int score = 0;
+
+        score += score_runs(bmp, N[0]);
+        score += N[1] * count_2blocks(bmp);
+        score += N[2] * count_locators(bmp);
+        score += N[3] * ((abs(calc_bw_balance(bmp) - 50) + 4) / 5);
+
+        return score;
+}
+
+static int score_runs(const struct qr_bitmap * bmp, int base)
+{
+        /* Runs of 5+n bits -> N[0] + i */
+        int x, y, flip;
+        int score = 0;
+        int count, last;
+
+        for (flip = 0; flip <= 1; ++flip) {
+                for (y = 0; y < bmp->height; ++y) {
+                        count = 0;
+                        for (x = 0; x < bmp->width; ++x) {
+                                int mask, bit;
+                                if (flip) {
+                                        mask = get_mask(bmp, y, x);
+                                        bit = get_mask(bmp, y, x);
+                                } else {
+                                        mask = get_mask(bmp, x, y);
+                                        bit = get_px(bmp, x, y);
+                                }
+
+                                if (mask &&
+                                    (count == 0 || !!bit == !!last)) {
+                                        ++count;
+                                        last = bit;
+                                } else {
+                                        if (count >= 5)
+                                                score += base + count - 5;
+                                        count = 0;
+                                }
+                        }
+                }
+        }
+
+        return score;
+}
+
+static int count_2blocks(const struct qr_bitmap * bmp)
+{
+        /* Count the number of 2x2 blocks (on or off) */
+        int x, y;
+        int count = 0;
+
+        /* Slow and stupid */
+        for (y = 0; y < bmp->height - 1; ++y) {
+                for (x = 0; x < bmp->width - 1; ++x) {
+                        if (get_mask(bmp, x, y) &&
+                            get_mask(bmp, x+1, y) &&
+                            get_mask(bmp, x, y+1) &&
+                            get_mask(bmp, x+1, y+1)) {
+                                int v[4];
+                                v[0] = get_px(bmp, x, y);
+                                v[1] = get_px(bmp, x+1, y);
+                                v[2] = get_px(bmp, x, y+1);
+                                v[3] = get_px(bmp, x+1, y+1);
+                                if (!(v[0] || v[1] || v[2] || v[3]) ||
+                                     (v[0] && v[1] && v[2] && v[3])) {
+                                        ++count;
+                                }
+                        }
+                }
+        }
+
+        return count;
+}
+
+static int count_locators(const struct qr_bitmap * bmp)
+{
+        /* 1:1:3:1:1 patterns -> N[2] */
+        int x, y, flip;
+        int count = 0;
+
+        for (flip = 0; flip <= 1; ++flip) {
+                for (y = 0; y < bmp->height - 7; ++y) {
+                        for (x = 0; x < bmp->width - 7; ++x) {
+                                int bits[7];
+                                int i;
+
+                                for (i = 0; i < 7; ++i)
+                                        if (!(flip ? get_mask(bmp, y, x+i) : get_mask(bmp, x+i, y)))
+                                                continue;
+
+                                for (i = 0; i < 7; ++i)
+                                        bits[i] = flip ? get_px(bmp, y, x+i) : get_px(bmp, x+i, y);
+
+                                if (!bits[0])
+                                        for (i = 0; i < 7; ++i)
+                                                bits[i] = !bits[i];
+
+                                if ( bits[0] && !bits[1] &&  bits[2] &&
+                                     bits[3] &&  bits[4] && !bits[5] &&
+                                     bits[6])
+                                        ++count;
+                        }
+                }
+        }
+
+        return count;
+}
+
+static int calc_bw_balance(const struct qr_bitmap * bmp)
+{
+        /* Calculate the proportion (in percent) of "on" bits */
+        int x, y;
+        unsigned char bit;
+        long on, total;
+
+        assert(bmp->mask); /* we only need this case */
+
+        on = total = 0;
+        for (y = 0; y < bmp->height; ++y) {
+                size_t off = y * bmp->stride;
+                unsigned char * bits = bmp->bits + off;
+                unsigned char * mask = bmp->mask + off;
+
+                for (x = 0; x < bmp->width / CHAR_BIT; ++x, ++bits, ++mask) {
+                        for (bit = 1; bit; bit <<= 1) {
+                                int m = *mask & bit;
+
+                                total += !!m;
+                                on += !!(*bits & m);
+                        }
+                }
+        }
+
+        return (on * 100) / total;
+}
+
+static int get_px(const struct qr_bitmap * bmp, int x, int y)
+{
+        size_t off = y * bmp->stride + x / CHAR_BIT;
+        unsigned char bit = 1 << (x % CHAR_BIT);
+
+        return bmp->bits[off] & bit;
+}
+
+static int get_mask(const struct qr_bitmap * bmp, int x, int y)
+{
+        size_t off = y * bmp->stride + x / CHAR_BIT;
+        unsigned char bit = 1 << (x % CHAR_BIT);
+
+        return bmp->mask[off] & bit;
 }
 
