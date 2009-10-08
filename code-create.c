@@ -24,6 +24,7 @@ static int draw_format(struct qr_bitmap * bmp,
                         enum qr_ec_level ec,
                         int mask);
 static int calc_format_bits(enum qr_ec_level ec, int mask);
+static long calc_version_bits(int version);
 static unsigned long gal_residue(unsigned long a, unsigned long m);
 
 /* FIXME: the static functions should be in a better
@@ -508,7 +509,18 @@ static int draw_format(struct qr_bitmap * bmp,
                 bits >>= 1;
         }
 
-        /* XXX: size info for 7~40 */
+        if (code->version >= 7) {
+                bits = calc_version_bits(code->version);
+
+                for (i = 0; i < 18; ++i) {
+                        if (bits & 0x1) {
+                                int a = i % 3, b = i / 3;
+                                setpx(bmp, dim - 11 + a, b);
+                                setpx(bmp, b, dim - 11 + a);
+                        }
+                        bits >>= 1;
+                }
+        }
 
         return 0;
 }
@@ -528,6 +540,21 @@ static int calc_format_bits(enum qr_ec_level ec, int mask)
 
         /* XOR mask: 101 0100 0001 0010 */
         bits ^= 0x5412;
+
+        return bits;
+}
+
+static long calc_version_bits(int version)
+{
+        long bits;
+
+        bits = version & 0x3F;
+
+        /* (18, 6) BCH code
+         *   G(x) = x^12 + x^11 + x^10 + x^9 + x^8 + x^5 + x^2 + 1
+         */
+        bits <<= 18 - 6;
+        bits |= gal_residue(bits, 0x1F25);
 
         return bits;
 }

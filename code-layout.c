@@ -45,7 +45,14 @@ void qr_layout_init_mask(struct qr_code * code)
                         if (x < 9 && y >= dim - 8) /* bottom-left */
                                 continue;
 
-                        /* XXX: format data */
+                        /* version info */
+                        if (code->version >= 7) {
+                                if (y < 6 && x >= dim - 11)
+                                        continue;
+                                if (x < 6 && y >= dim - 11)
+                                        continue;
+                        }
+
                         /* XXX: alignment pattern */
 
                         row[off] |= bit;
