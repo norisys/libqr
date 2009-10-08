@@ -5,10 +5,10 @@
 #include "types.h"
 
 enum qr_ec_level {
-        QR_EC_LEVEL_L,
-        QR_EC_LEVEL_M,
-        QR_EC_LEVEL_Q,
-        QR_EC_LEVEL_H
+        QR_EC_LEVEL_L = 0x1,
+        QR_EC_LEVEL_M = 0x0,
+        QR_EC_LEVEL_Q = 0x3,
+        QR_EC_LEVEL_H = 0x2
 };
 
 struct qr_code * qr_code_create(enum qr_ec_level       ec,

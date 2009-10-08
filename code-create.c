@@ -19,6 +19,12 @@ static int count_locators(const struct qr_bitmap * bmp);
 static int calc_bw_balance(const struct qr_bitmap * bmp);
 static int get_px(const struct qr_bitmap * bmp, int x, int y);
 static int get_mask(const struct qr_bitmap * bmp, int x, int y);
+static int draw_format(struct qr_bitmap * bmp,
+                        struct qr_code * code,
+                        enum qr_ec_level ec,
+                        int mask);
+static int calc_format_bits(enum qr_ec_level ec, int mask);
+static unsigned long gal_residue(unsigned long a, unsigned long m);
 
 /* FIXME: the static functions should be in a better
  * order, with prototypes.
@@ -63,6 +69,7 @@ static void draw_locator(struct qr_bitmap * bmp, int x, int y)
 }
 
 static int draw_functional(struct qr_code * code,
+                           enum qr_ec_level ec,
                            unsigned int mask)
 {
         struct qr_bitmap * bmp;
@@ -85,8 +92,13 @@ static int draw_functional(struct qr_code * code,
         }
 
         /* XXX: alignment pattern */
-        /* XXX: mask, format info */
 
+        /* Format info */
+        setpx(bmp, 8, dim - 8);
+        if (draw_format(bmp, code, ec, mask) != 0)
+                return -1;
+
+        /* Merge data */
         qr_bitmap_merge(bmp, code->modules);
         qr_bitmap_destroy(code->modules);
         code->modules = bmp;
@@ -261,7 +273,7 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         if (mask < 0)
                 goto fail;
 
-        if (draw_functional(code, mask) != 0)
+        if (draw_functional(code, ec, mask) != 0)
                 goto fail;
 
 exit:
@@ -464,5 +476,89 @@ static int get_mask(const struct qr_bitmap * bmp, int x, int y)
         unsigned char bit = 1 << (x % CHAR_BIT);
 
         return bmp->mask[off] & bit;
+}
+
+static int draw_format(struct qr_bitmap * bmp,
+                        struct qr_code * code,
+                        enum qr_ec_level ec,
+                        int mask)
+{
+        int i;
+        size_t dim;
+        long bits;
+
+        dim = bmp->width;
+
+        bits = calc_format_bits(ec, mask);
+        if (bits < 0)
+                return -1;
+
+        for (i = 0; i < 8; ++i) {
+                if (bits & 0x1) {
+                        setpx(bmp, 8, i);
+                        setpx(bmp, dim - 1 - i, 8);
+                }
+                bits >>= 1;
+        }
+
+        for (i = 0; i < 7; ++i) {
+                if (bits & 0x1) {
+                        setpx(bmp, 8, dim - 7 + i);
+                        setpx(bmp, 6 - i + (i == 0), 8);
+                }
+                bits >>= 1;
+        }
+
+        /* XXX: size info for 7~40 */
+
+        return 0;
+}
+
+static int calc_format_bits(enum qr_ec_level ec, int mask)
+{
+        int bits;
+
+        bits = (ec & 0x3) << 3 | (mask & 0x7);
+
+        /* Compute (15, 5) BCH code with
+         *   G(x) = x^10 + x^8 + x^5 + x^4 + x^2 + x + 1
+         */
+
+        bits <<= 15 - 5;
+        bits |= (unsigned int)gal_residue(bits, 0x537);
+
+        /* XOR mask: 101 0100 0001 0010 */
+        bits ^= 0x5412;
+
+        return bits;
+}
+
+/* Calculate the residue of a modulo m */
+static unsigned long gal_residue(unsigned long a,
+                                   unsigned long m)
+{
+        unsigned long o = 1;
+        int n = 1;
+
+        /* Find one past the highest bit of the modulus */
+        while (m & ~(o - 1))
+                o <<= 1;
+
+        /* Find the highest n such that O(m * x^n) <= O(a) */
+        while (a & ~(o - 1)) {
+                o <<= 1;
+                ++n;
+        }
+
+        /* For each n, try to reduce a by (m * x^n) */
+        while (n--) {
+                o >>= 1;
+
+                /* o is the highest bit of (m * x^n) */
+                if (a & o)
+                        a ^= m << n;
+        }
+
+        return a;
 }
 
