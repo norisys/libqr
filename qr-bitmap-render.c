@@ -2,7 +2,7 @@
 #include <limits.h>
 #include <assert.h>
 
-#include "qr-bitmap.h"
+#include <qr/bitmap.h>
 
 /* CHAR_BIT | mod_bits  (multi-byte) */
 static void render_line_1(unsigned char *       out,

@@ -23,9 +23,5 @@ void qr_bitmap_render(const struct qr_bitmap * bmp,
                       unsigned long            mark,
                       unsigned long            space);
 
-int qr_bitmap_write_pbm(const char *             path,
-                        const char *             comment,
-                        const struct qr_bitmap * bmp);
-
 #endif
 

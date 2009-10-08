@@ -2,7 +2,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include "qr-bitmap.h"
+#include <qr/bitmap.h>
 
 struct qr_bitmap * qr_bitmap_create(int width, int height, int masked)
 {

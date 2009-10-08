@@ -2,8 +2,8 @@
 #define CODE_COMMON_H
 
 #include <qr/code.h>
+#include <qr/bitmap.h>
 #include "qr-bitstream.h"
-#include "qr-bitmap.h"
 
 struct qr_code {
         int                version;

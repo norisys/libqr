@@ -2,4 +2,4 @@
 *.o
 *.a
 *.so
-test
+qrgen

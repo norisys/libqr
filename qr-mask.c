@@ -1,6 +1,6 @@
 #include <limits.h>
 #include <stdlib.h>
-#include "qr-bitmap.h"
+#include <qr/bitmap.h>
 #include "qr-mask.h"
 
 struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,

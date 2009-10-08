@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <qr/code.h>
-
+#include <qr/bitmap.h>
 #include "code-common.h"
-#include "qr-bitmap.h"
 
 void qr_code_destroy(struct qr_code * code)
 {
