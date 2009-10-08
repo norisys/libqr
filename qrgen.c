@@ -137,39 +137,45 @@ void parse_options(int argc, char ** argv, struct config * conf)
         int c;
 
         for (;;) {
-                c = getopt(argc, argv, ":?vetap");
+                c = getopt(argc, argv, ":hv:e:t:ap");
 
                 if (c == -1) /* no more options */
                         break;
 
                 switch (c) {
-                case '?': /* help */
+                case 'h': /* help */
                         show_help();
                         exit(0);
                         break;
                 case 'v': /* version */
-                        if (!optarg) {
-                                fprintf(stderr, "No version\n");
-                                exit(1);
-                        }
                         conf->version = atoi(optarg);
                         if (conf->version < 1 || conf->version > 40) {
                                 fprintf(stderr,
-                                        "Version must be between 1 and 40\n");
+                                 "Version must be between 1 and 40\n");
                                 exit(1);
                         }
                         break;
                 case 'e': /* ec */
-                        fprintf(stderr, "XXX: ignored \"ec\"\n"); break;
+                        fprintf(stderr, "XXX: ignored \"ec\"\n");
+                        break;
                 case 't': /* type */
-                        fprintf(stderr, "XXX: ignored \"type\"\n"); break;
+                        fprintf(stderr, "XXX: ignored \"type\"\n");
+                        break;
                 case 'a': /* ansi */
                         conf->ansi = 1; break;
                 case 'p': /* pnm */
                         conf->ansi = 0; break;
-                case ':': default:
-                        fprintf(stderr, "Unknown option: \"%s\"\n",
-                                argv[optind]);
+                case ':':
+                        fprintf(stderr,
+                                "Argument \"%s\" missing parameter\n",
+                                argv[optind-1]);
+                        exit(1);
+                        break;
+                case '?': default:
+                        fprintf(stderr,
+                                "Invalid argument: \"%s\"\n"
+                                "Try -h for help\n",
+                                argv[optind-1]);
                         exit(1);
                         break;
                 }
@@ -180,7 +186,7 @@ void parse_options(int argc, char ** argv, struct config * conf)
                 conf->input = argv[optind++];
 
         if (!conf->input) {
-                fprintf(stderr, "No data (try -? for help)\n");
+                fprintf(stderr, "No data (try -h for help)\n");
                 exit(1);
         }
 }
