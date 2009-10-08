@@ -19,7 +19,7 @@ struct qr_iterator {
 void qr_layout_init_mask(struct qr_code * code)
 {
         int x, y;
-        int dim = code_side_length(code->format);
+        int dim = qr_code_width(code);
         struct qr_bitmap * bmp = code->modules;
 
         assert(bmp->mask);
@@ -110,7 +110,7 @@ struct qr_iterator * qr_layout_begin(struct qr_code * code)
 
         i = malloc(sizeof(*i));
         if (i) {
-                i->dim = code_side_length(code->format);
+                i->dim = qr_code_width(code);
                 i->code = code;
                 i->column = i->dim - 1;
                 i->row = i->dim - 1;

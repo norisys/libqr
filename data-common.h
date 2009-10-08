@@ -6,14 +6,14 @@
 #include "qr-bitstream.h"
 
 struct qr_data {
-        int                format; /* 1 ~ 40 */
+        int                version; /* 1 ~ 40 */
         struct qr_bitstream * bits;
         size_t             offset;
 };
 
 extern const enum qr_data_type QR_TYPE_CODES[16];
 
-size_t get_size_field_length(int format, enum qr_data_type);
+size_t get_size_field_length(int version, enum qr_data_type);
 
 #endif
 

@@ -6,13 +6,11 @@
 #include "qr-bitmap.h"
 
 struct qr_code {
-        int                format;
+        int                version;
         struct qr_bitmap * modules;
 };
 
-int code_side_length(int format);
-
-size_t code_total_capacity(int format);
+size_t code_total_capacity(int version);
 
 #endif
 

@@ -14,26 +14,21 @@ void qr_code_destroy(struct qr_code * code)
 
 int qr_code_width(const struct qr_code * code)
 {
-        return code_side_length(code->format);
+        return code->version * 4 + 17;
 }
 
-int code_side_length(int format)
+size_t code_total_capacity(int version)
 {
-        return format * 4 + 17;
-}
+	int side = version * 4 + 17;
 
-size_t code_total_capacity(int format)
-{
-	int side = format * 4 + 17;
-
-	int alignment_side = format > 1 ? (format / 7) + 2 : 0;
+	int alignment_side = version > 1 ? (version / 7) + 2 : 0;
 
 	int alignment_count = alignment_side >= 2 ?
 		alignment_side * alignment_side - 3 : 0;
 
 	int locator_bits = 8*8*3;
 
-	int format_bits = 8*4 - 1 + (format >= 7 ? 6*3*2 : 0);
+	int format_bits = 8*4 - 1 + (version >= 7 ? 6*3*2 : 0);
 
 	int timing_bits = 2 * (side - 8*2 -
 		(alignment_side > 2 ? (alignment_side - 2) * 5 : 0));

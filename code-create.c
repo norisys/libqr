@@ -73,7 +73,7 @@ static int draw_functional(struct qr_code * code,
                            unsigned int mask)
 {
         struct qr_bitmap * bmp;
-        int dim = code_side_length(code->format);
+        int dim = qr_code_width(code);
         int i;
 
         bmp = qr_bitmap_create(dim, dim, 0);
@@ -146,11 +146,11 @@ static int pad_data(struct qr_bitstream * bits, size_t limit)
         return 0;
 }
 
-static struct qr_bitstream * make_data(int                format,
-                                    enum qr_ec_level   ec,
-                                    struct qr_bitstream * data)
+static struct qr_bitstream * make_data(int version,
+                                       enum qr_ec_level   ec,
+                                       struct qr_bitstream * data)
 {
-        const size_t total_bits = code_total_capacity(format);
+        const size_t total_bits = code_total_capacity(version);
         const size_t total_words = total_bits / 8;
         size_t block_count, data_words, rs_words;
         size_t i;
@@ -246,15 +246,14 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         if (!code)
                 return 0;
 
-        dim = code_side_length(data->format);
-
-        code->format = data->format;
+        code->version = data->version;
+        dim = qr_code_width(code);
         code->modules = qr_bitmap_create(dim, dim, 1);
 
         if (!code->modules)
                 goto fail;
 
-        bits = make_data(data->format, ec, data->bits);
+        bits = make_data(data->version, ec, data->bits);
         if (!bits)
                 goto fail;
 

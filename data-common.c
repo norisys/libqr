@@ -29,7 +29,7 @@ void qr_free_data(struct qr_data * data)
         free(data);
 }
 
-size_t get_size_field_length(int format, enum qr_data_type type)
+size_t get_size_field_length(int version, enum qr_data_type type)
 {
         static const size_t QR_SIZE_LENGTHS[3][4] = {
                 { 10,  9,  8,  8 },
@@ -46,9 +46,9 @@ size_t get_size_field_length(int format, enum qr_data_type type)
         default:                return 0;
         }
 
-        if (format < 10)
+        if (version < 10)
                 row = 0;
-        else if (format < 27)
+        else if (version < 27)
                 row = 1;
         else
                 row = 2;

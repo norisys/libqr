@@ -18,7 +18,7 @@ static void write_type_and_length(struct qr_data *  data,
 {
         (void)qr_bitstream_write(data->bits, QR_TYPE_CODES[type], 4);
         (void)qr_bitstream_write(data->bits, length,
-                get_size_field_length(data->format, type));
+                get_size_field_length(data->version, type));
 }
 
 static struct qr_data * encode_numeric(struct qr_data * data,
@@ -28,7 +28,7 @@ static struct qr_data * encode_numeric(struct qr_data * data,
         struct qr_bitstream * stream = data->bits;
         size_t bits;
 
-        bits = 4 + get_size_field_length(data->format, QR_DATA_NUMERIC)
+        bits = 4 + get_size_field_length(data->version, QR_DATA_NUMERIC)
                  + 10 * (length / 3);
 
         if (length % 3 == 1)
@@ -106,7 +106,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
         struct qr_bitstream * stream = data->bits;
         size_t bits;
 
-        bits = 4 + get_size_field_length(data->format, QR_DATA_ALPHA)
+        bits = 4 + get_size_field_length(data->version, QR_DATA_ALPHA)
                  + 11 * (length / 2)
                  + 6 * (length % 2);
 
@@ -150,7 +150,7 @@ static struct qr_data * encode_8bit(struct qr_data * data,
         struct qr_bitstream * stream = data->bits;
         size_t bits;
 
-        bits = 4 + get_size_field_length(data->format, QR_DATA_8BIT)
+        bits = 4 + get_size_field_length(data->version, QR_DATA_8BIT)
                  + 8 * length;
 
         stream = data->bits;
@@ -173,21 +173,21 @@ static struct qr_data * encode_kanji(struct qr_data * data,
         return 0;
 }
 
-struct qr_data * qr_create_data(int               format,
+struct qr_data * qr_create_data(int               version,
                                 enum qr_data_type type,
                                 const char *      input,
                                 size_t            length)
 {
         struct qr_data * data;
 
-        if (format < 1 || format > 40)
+        if (version < 1 || version > 40)
                 return 0;
 
         data = malloc(sizeof(*data));
         if (!data)
                 return 0;
 
-        data->format = format;
+        data->version = version;
         data->bits   = qr_bitstream_create();
         data->offset = 0;
 
