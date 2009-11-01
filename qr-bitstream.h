@@ -15,7 +15,7 @@ struct qr_bitstream;
 struct qr_bitstream * qr_bitstream_create(void);
 int                qr_bitstream_resize(struct qr_bitstream *, size_t bits);
 void               qr_bitstream_destroy(struct qr_bitstream *);
-struct qr_bitstream * qr_bitstream_copy(const struct qr_bitstream *);
+struct qr_bitstream * qr_bitstream_dup(const struct qr_bitstream *);
 
 void qr_bitstream_seek(struct qr_bitstream *, size_t pos);
 size_t qr_bitstream_tell(const struct qr_bitstream *);
@@ -39,6 +39,10 @@ int qr_bitstream_pack(struct qr_bitstream *,
                    size_t               bitsize);
 
 int qr_bitstream_cat(struct qr_bitstream *, const struct qr_bitstream * src);
+
+int qr_bitstream_copy(struct qr_bitstream * dest,
+                      struct qr_bitstream * src,
+                      size_t count);
 
 #endif
 

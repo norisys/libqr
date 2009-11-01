@@ -80,7 +80,7 @@ void qr_bitstream_destroy(struct qr_bitstream * stream)
         free(stream);
 }
 
-struct qr_bitstream * qr_bitstream_copy(const struct qr_bitstream * src)
+struct qr_bitstream * qr_bitstream_dup(const struct qr_bitstream * src)
 {
         struct qr_bitstream * ret;
 
@@ -210,6 +210,20 @@ int qr_bitstream_cat(struct qr_bitstream * dest, const struct qr_bitstream * src
 
         srcpos = qr_bitstream_tell(src);
         qr_bitstream_seek((struct qr_bitstream *)src, 0);
+        qr_bitstream_copy(dest, (struct qr_bitstream *)src, count);
+        qr_bitstream_seek((struct qr_bitstream *)src, srcpos);
+
+        return 0;
+}
+
+int qr_bitstream_copy(struct qr_bitstream * dest,
+                      struct qr_bitstream * src,
+                      size_t count)
+{
+        if (qr_bitstream_remaining(src) < count)
+                return -1;
+        if (ensure_available(dest, count) != 0)
+                return -1;
 
         /* uint must be at least 16 bits */
         for (; count >= 16; count -= 16)
@@ -223,8 +237,6 @@ int qr_bitstream_cat(struct qr_bitstream * dest, const struct qr_bitstream * src
                         dest,
                         qr_bitstream_read((struct qr_bitstream *)src, count),
                         count);
-
-        qr_bitstream_seek((struct qr_bitstream *)src, srcpos);
 
         return 0;
 }

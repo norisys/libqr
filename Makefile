@@ -1,4 +1,5 @@
-OBJECTS :=      code-common.o           \
+OBJECTS :=      capacity.o              \
+                code-common.o           \
                 code-create.o           \
                 code-layout.o           \
                 code-parse.o            \

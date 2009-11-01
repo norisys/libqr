@@ -11,6 +11,9 @@
 
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
 
+extern const int QR_DATA_WORD_COUNT[40][4];
+extern const int QR_RS_BLOCK_COUNT[40][4][2];
+
 static int mask_data(struct qr_code * code);
 static int score_mask(const struct qr_bitmap * bmp);
 static int score_runs(const struct qr_bitmap * bmp, int base);
@@ -153,7 +156,8 @@ static struct qr_bitstream * make_data(int version,
 {
         const size_t total_bits = code_total_capacity(version);
         const size_t total_words = total_bits / 8;
-        size_t block_count, data_words, rs_words;
+        const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
+        size_t total_blocks, block_count[2], data_words, rs_words;
         size_t i;
         struct qr_bitstream * dcopy = 0;
         struct qr_bitstream * out = 0;
@@ -167,38 +171,38 @@ static struct qr_bitstream * make_data(int version,
         if (qr_bitstream_resize(out, total_bits) != 0)
                 goto fail;
 
-        /**
-         * XXX: For our test case (1-M) there is only one RS block.
-         * This is not the case for most other formats, so we'll
-         * have to deal with this eventually.
-         */
-        block_count = 1;
-        data_words = 16;
-        rs_words = 10;
-        assert(data_words + rs_words == total_words);
+        /* XXX: 14-M will be incorrect */
+        block_count[0] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][0];
+        block_count[1] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][1];
+        total_blocks = block_count[0] + block_count[1];
+        data_words = total_data / total_blocks;
+        rs_words = total_words / total_blocks - data_words;
+        assert((data_words + rs_words) * block_count[0] +
+               (data_words + rs_words + 1) * block_count[1] == total_words);
 
         /* Make a copy of the data and pad it */
-        dcopy = qr_bitstream_copy(data);
+        dcopy = qr_bitstream_dup(data);
         if (!dcopy)
                 goto fail;
 
-        if (pad_data(dcopy, data_words * 8) != 0)
+        if (pad_data(dcopy, total_data * 8) != 0)
                 goto fail;
 
         fputs("Pad data:\n", stderr);
         x_dump(dcopy);
 
         /* Make space for the RS blocks */
-        blocks = calloc(block_count, sizeof(*blocks));
+        blocks = calloc(total_blocks, sizeof(*blocks));
         if (!blocks)
                 goto fail;
 
         /* Generate RS codewords */
         qr_bitstream_seek(dcopy, 0);
         fputs("Generate RS blocks:\n", stderr);
-        for (i = 0; i < block_count; ++i) {
-                /* XXX: some blocks may be longer */
-                blocks[i] = rs_generate_words(dcopy, data_words, rs_words);
+        for (i = 0; i < total_blocks; ++i) {
+                size_t dw = data_words + (i >= block_count[0]);
+
+                blocks[i] = rs_generate_words(dcopy, dw, rs_words);
                 if (!blocks[i]) {
                         while (i--)
                                 qr_bitstream_destroy(blocks[i]);
@@ -210,17 +214,20 @@ static struct qr_bitstream * make_data(int version,
         }
 
         /* Finally, write everything out in the correct order */
-        /* XXX: need to handle multiple blocks */
-        qr_bitstream_cat(out, dcopy);
-        qr_bitstream_cat(out, blocks[0]);
+        qr_bitstream_seek(dcopy, 0);
+        for (i = 0; i < total_blocks; ++i) {
+                size_t dw = data_words + (i >= block_count[0]);
+                qr_bitstream_copy(out, dcopy, dw * 8);
+                qr_bitstream_cat(out, blocks[i]);
+        }
         qr_bitstream_write(out, 0, total_bits - total_words * 8);
 
         fputs("Final bitstream:\n", stderr);
         x_dump(out);
 exit:
         if (blocks) {
-                while (block_count--)
-                       qr_bitstream_destroy(blocks[block_count]);
+                while (total_blocks--)
+                       qr_bitstream_destroy(blocks[total_blocks]);
                 free(blocks);
         }
         if (dcopy)
