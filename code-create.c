@@ -79,6 +79,8 @@ static int draw_functional(struct qr_code * code,
         struct qr_bitmap * bmp;
         int dim = qr_code_width(code);
         int i;
+        int x, y;
+        int am_side;
 
         bmp = qr_bitmap_create(dim, dim, 0);
         if (!bmp)
@@ -95,7 +97,26 @@ static int draw_functional(struct qr_code * code,
                 setpx(bmp, 6, i);
         }
 
-        /* XXX: alignment pattern */
+        /* Alignment pattern */
+        am_side = code->version > 1 ? (code->version / 7) + 2 : 0;
+        for (y = 0; y < am_side; ++y) {
+                const int * am_pos = QR_ALIGNMENT_LOCATION[code->version - 1];
+
+                for (x = 0; x < am_side; ++x) {
+                        if ((x == 0 && y == 0) ||
+                            (x == 0 && y == am_side - 1) ||
+                            (x == am_side - 1 && y == 0))
+                                continue;
+
+                        for (i = -2; i < 2; ++i) {
+                                setpx(bmp, am_pos[x] + i, am_pos[y] - 2);
+                                setpx(bmp, am_pos[x] + 2, am_pos[y] + i);
+                                setpx(bmp, am_pos[x] - i, am_pos[y] + 2);
+                                setpx(bmp, am_pos[x] - 2, am_pos[y] - i);
+                        }
+                        setpx(bmp, am_pos[x], am_pos[y]);
+                }
+        }
 
         /* Format info */
         setpx(bmp, 8, dim - 8);

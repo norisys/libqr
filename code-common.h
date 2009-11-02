@@ -12,5 +12,7 @@ struct qr_code {
 
 size_t code_total_capacity(int version);
 
+extern const int QR_ALIGNMENT_LOCATION[40][7];
+
 #endif
 

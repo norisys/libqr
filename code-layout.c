@@ -21,6 +21,8 @@ void qr_layout_init_mask(struct qr_code * code)
         int x, y;
         int dim = qr_code_width(code);
         struct qr_bitmap * bmp = code->modules;
+        const int * am_pos = QR_ALIGNMENT_LOCATION[code->version - 1];
+        int am_side;
 
         assert(bmp->mask);
 
@@ -53,9 +55,30 @@ void qr_layout_init_mask(struct qr_code * code)
                                         continue;
                         }
 
-                        /* XXX: alignment pattern */
-
                         row[off] |= bit;
+                }
+        }
+
+        /* Alignment pattern */
+        am_side = code->version > 1 ? (code->version / 7) + 2 : 0;
+        for (y = 0; y < am_side; ++y) {
+                for (x = 0; x < am_side; ++x) {
+                        int i, j;
+
+                        if ((x == 0 && y == 0) ||
+                            (x == 0 && y == am_side - 1) ||
+                            (x == am_side - 1 && y == 0))
+                                continue;
+
+                        for (j = -2; j <= 2; ++j) {
+                                unsigned char * row = bmp->mask + (am_pos[y]+j) * bmp->stride;
+                                for (i = -2; i <= 2; ++i) {
+                                        unsigned char bit = 1 << ((am_pos[x]+i) % CHAR_BIT);
+                                        int off = (am_pos[x]+i) / CHAR_BIT;
+
+                                        row[off] &= ~bit;
+                                }
+                        }
                 }
         }
 }
