@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -120,7 +121,14 @@ void output_ansi(const struct qr_bitmap * bmp)
 }
 
 void show_help() {
-        fprintf(stderr, "(help message)\n");
+        fprintf(stderr,
+                "Usage:\n\t%s [options] <data>\n\n"
+                "\t-h         Display this help message\n"
+                "\t-v <n>     Specify QR version (size) 1 <= n <= 40\n"
+                "\t-e <type>  Specify EC type: L, M, Q, H\n"
+                "\t-a         Output as ANSI graphics (default)\n"
+                "\t-p         Output as PBM\n\n",
+                "qrgen");
 }
 
 void set_default_config(struct config * conf)
@@ -129,7 +137,7 @@ void set_default_config(struct config * conf)
         conf->ec = QR_EC_LEVEL_M;
         conf->dtype = QR_DATA_NUMERIC;
         conf->ansi = 1;
-        conf->input = "01234567";
+        conf->input = NULL;
 }
 
 void parse_options(int argc, char ** argv, struct config * conf)
@@ -156,7 +164,16 @@ void parse_options(int argc, char ** argv, struct config * conf)
                         }
                         break;
                 case 'e': /* ec */
-                        fprintf(stderr, "XXX: ignored \"ec\"\n");
+                        switch (tolower(optarg[0])) {
+                        case 'l': conf->ec = QR_EC_LEVEL_L; break;
+                        case 'm': conf->ec = QR_EC_LEVEL_M; break;
+                        case 'q': conf->ec = QR_EC_LEVEL_Q; break;
+                        case 'h': conf->ec = QR_EC_LEVEL_H; break;
+                        default:
+                                fprintf(stderr,
+                                        "Invalid EC type (%c). Choose from"
+                                        " L, M, Q or H.\n", optarg[0]);
+                        }
                         break;
                 case 't': /* type */
                         fprintf(stderr, "XXX: ignored \"type\"\n");
