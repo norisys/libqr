@@ -179,7 +179,7 @@ static struct qr_bitstream * make_data(int version,
         const size_t total_words = total_bits / 8;
         const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
         size_t total_blocks, block_count[2], data_words, rs_words;
-        size_t i;
+        size_t i, w;
         struct qr_bitstream * dcopy = 0;
         struct qr_bitstream * out = 0;
         struct qr_bitstream ** blocks = 0;
@@ -235,12 +235,24 @@ static struct qr_bitstream * make_data(int version,
         }
 
         /* Finally, write everything out in the correct order */
-        qr_bitstream_seek(dcopy, 0);
-        for (i = 0; i < total_blocks; ++i) {
-                size_t dw = data_words + (i >= block_count[0]);
-                qr_bitstream_copy(out, dcopy, dw * 8);
-                qr_bitstream_cat(out, blocks[i]);
+        for (w = 0; w < data_words + 1; ++w) {
+                for (i = (w == data_words ? block_count[0] : 0); i < total_blocks; ++i) {
+                        size_t di = w + (i < block_count[0] ?
+                                i * data_words :
+                                i * (data_words + 1) - block_count[0]);
+
+                        qr_bitstream_seek(dcopy, di * 8);
+                        qr_bitstream_write(out,
+                                qr_bitstream_read(dcopy, 8), 8);
+                }
         }
+        for (i = 0; i < total_blocks; ++i)
+                qr_bitstream_seek(blocks[i], 0);
+        for (w = 0; w < rs_words; ++w)
+                for (i = 0; i < total_blocks; ++i)
+                        qr_bitstream_write(out,
+                                qr_bitstream_read(blocks[i], 8), 8);
+
         qr_bitstream_write(out, 0, total_bits - total_words * 8);
 
         fputs("Final bitstream:\n", stderr);

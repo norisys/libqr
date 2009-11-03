@@ -74,7 +74,6 @@ struct qr_bitstream * rs_generate_words(struct qr_bitstream * data,
                 goto fail;
 
         /* First, prepare the registers (b) with data bits */
-        qr_bitstream_seek(data, 0);
         for (i = 0; i < data_words; ++i) {
                 unsigned int x = b[n-1] ^ qr_bitstream_read(data, 8);
                 for (r = n-1; r > 0; --r)
