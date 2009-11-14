@@ -135,7 +135,7 @@ void set_default_config(struct config * conf)
 {
         conf->version = 0;
         conf->ec = QR_EC_LEVEL_M;
-        conf->dtype = QR_DATA_NUMERIC;
+        conf->dtype = QR_DATA_8BIT;
         conf->ansi = 1;
         conf->input = NULL;
 }
