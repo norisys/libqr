@@ -274,8 +274,7 @@ fail:
         goto exit;
 }
 
-struct qr_code * qr_code_create(enum qr_ec_level       ec,
-                                const struct qr_data * data)
+struct qr_code * qr_code_create(const struct qr_data * data)
 {
         struct qr_code * code;
         struct qr_bitstream * bits = 0;
@@ -294,7 +293,7 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         if (!code->modules)
                 goto fail;
 
-        bits = make_data(data->version, ec, data->bits);
+        bits = make_data(data->version, data->ec, data->bits);
         if (!bits)
                 goto fail;
 
@@ -313,7 +312,7 @@ struct qr_code * qr_code_create(enum qr_ec_level       ec,
         if (mask < 0)
                 goto fail;
 
-        if (draw_functional(code, ec, mask) != 0)
+        if (draw_functional(code, data->ec, mask) != 0)
                 goto fail;
 
 exit:

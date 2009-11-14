@@ -15,7 +15,15 @@ enum qr_data_type {
         QR_DATA_FNC1    =  9
 };
 
+enum qr_ec_level {
+        QR_EC_LEVEL_L = 0x1,
+        QR_EC_LEVEL_M = 0x0,
+        QR_EC_LEVEL_Q = 0x3,
+        QR_EC_LEVEL_H = 0x2
+};
+
 struct qr_data * qr_create_data(int               format, /* 1 ~ 40 */
+                                enum qr_ec_level  ec,
                                 enum qr_data_type type,
                                 const char *      input,
                                 size_t            length);

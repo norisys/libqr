@@ -3,7 +3,6 @@
  */
 
 /** XXX: check that the data will fit! **/
-/** NOTE: should store ec type in qr_data **/
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -174,6 +173,7 @@ static struct qr_data * encode_kanji(struct qr_data * data,
 }
 
 struct qr_data * qr_create_data(int               version,
+                                enum qr_ec_level  ec,
                                 enum qr_data_type type,
                                 const char *      input,
                                 size_t            length)
@@ -188,6 +188,7 @@ struct qr_data * qr_create_data(int               version,
                 return 0;
 
         data->version = version;
+        data->ec      = ec;
         data->bits   = qr_bitstream_create();
         data->offset = 0;
 

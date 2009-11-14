@@ -31,7 +31,7 @@ struct qr_code * create(int               version,
 
         len = strlen(input);
 
-        data = qr_create_data(version, dtype, input, len);
+        data = qr_create_data(version, ec, dtype, input, len);
 
         if (!data) {
                 /* BUG: this could also indicate OOM or
@@ -41,7 +41,7 @@ struct qr_code * create(int               version,
                 exit(1);
         }
 
-        code = qr_code_create(ec, data);
+        code = qr_code_create(data);
 
         if (!code) {
                 perror("Failed to create code");

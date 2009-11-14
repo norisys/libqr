@@ -7,6 +7,7 @@
 
 struct qr_data {
         int                version; /* 1 ~ 40 */
+        enum qr_ec_level      ec;
         struct qr_bitstream * bits;
         size_t             offset;
 };
