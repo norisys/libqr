@@ -5,8 +5,7 @@
 #include "galois.h"
 
 /* Calculate the residue of a modulo m */
-unsigned long gf_residue(unsigned long a,
-                         unsigned long m)
+unsigned long gf_residue(unsigned long a, unsigned long m)
 {
         unsigned long o = 1;
         int n = 1;
@@ -77,8 +76,8 @@ static unsigned int * make_generator(int k)
 }
 
 struct qr_bitstream * rs_generate_words(struct qr_bitstream * data,
-                                     size_t data_words,
-                                     size_t rs_words)
+                                        size_t data_words,
+                                        size_t rs_words)
 {
         struct qr_bitstream * ec = 0;
         unsigned int * b = 0;

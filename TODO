@@ -1,20 +1,11 @@
-* Fix XXX, TODO
-* Tidy code
-* RELEASE v0.1
-
 * Parsing
-* RELEASE v0.2
 
 * Detection
-* RELEASE v0.3
 
 * Test suite
 * No-malloc
 * Optimize
 * Documentation
-* RELEASE v0.4 (BETA)
-
-* RELEASE v1.0
 
 * Other data types
 

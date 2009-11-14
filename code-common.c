@@ -47,7 +47,7 @@ struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
         struct qr_bitmap * bmp;
         int i, j;
 
-        if (mask & ~0x7)
+        if (mask > 7)
                 return 0;
 
         bmp = qr_bitmap_clone(orig);
