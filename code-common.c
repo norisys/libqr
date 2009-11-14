@@ -1,7 +1,10 @@
+#include <assert.h>
+#include <limits.h>
 #include <stdlib.h>
+
 #include <qr/code.h>
 #include <qr/bitmap.h>
-#include "code-common.h"
+#include <qr/bitstream.h>
 
 void qr_code_destroy(struct qr_code * code)
 {
@@ -16,7 +19,7 @@ int qr_code_width(const struct qr_code * code)
         return code->version * 4 + 17;
 }
 
-size_t code_total_capacity(int version)
+size_t qr_code_total_capacity(int version)
 {
 	int side = version * 4 + 17;
 
@@ -38,46 +41,44 @@ size_t code_total_capacity(int version)
 	return side * side - function_bits;
 }
 
-const int QR_ALIGNMENT_LOCATION[40][7] = {
-        {  0,  0,  0,  0,  0,  0,  0 }, /*  1 */
-        {  6, 18,  0,  0,  0,  0,  0 }, /*  2 */
-        {  6, 22,  0,  0,  0,  0,  0 }, /*  3 */
-        {  6, 26,  0,  0,  0,  0,  0 }, /*  4 */
-        {  6, 30,  0,  0,  0,  0,  0 }, /*  5 */
-        {  6, 34,  0,  0,  0,  0,  0 }, /*  6 */
-        {  6, 22, 38,  0,  0,  0,  0 }, /*  7 */
-        {  6, 24, 42,  0,  0,  0,  0 }, /*  8 */
-        {  6, 26, 46,  0,  0,  0,  0 }, /*  9 */
-        {  6, 28, 50,  0,  0,  0,  0 }, /* 10 */
-        {  6, 30, 54,  0,  0,  0,  0 }, /* 11 */
-        {  6, 32, 58,  0,  0,  0,  0 }, /* 12 */
-        {  6, 34, 62,  0,  0,  0,  0 }, /* 13 */
-        {  6, 26, 46, 66,  0,  0,  0 }, /* 14 */
-        {  6, 26, 48, 70,  0,  0,  0 }, /* 15 */
-        {  6, 26, 50, 74,  0,  0,  0 }, /* 16 */
-        {  6, 30, 54, 78,  0,  0,  0 }, /* 17 */
-        {  6, 30, 56, 82,  0,  0,  0 }, /* 18 */
-        {  6, 30, 58, 86,  0,  0,  0 }, /* 19 */
-        {  6, 34, 62, 90,  0,  0,  0 }, /* 20 */
-        {  6, 28, 50, 72, 94,  0,  0 }, /* 21 */
-        {  6, 26, 50, 74, 98,  0,  0 }, /* 22 */
-        {  6, 30, 54, 78,102,  0,  0 }, /* 23 */
-        {  6, 28, 54, 80,106,  0,  0 }, /* 24 */
-        {  6, 32, 58, 84,110,  0,  0 }, /* 25 */
-        {  6, 30, 58, 86,114,  0,  0 }, /* 26 */
-        {  6, 34, 62, 90,118,  0,  0 }, /* 27 */
-        {  6, 26, 50, 74, 98,122,  0 }, /* 28 */
-        {  6, 30, 54, 78,102,126,  0 }, /* 29 */
-        {  6, 26, 52, 78,104,130,  0 }, /* 30 */
-        {  6, 30, 56, 82,108,134,  0 }, /* 31 */
-        {  6, 34, 60, 86,112,138,  0 }, /* 32 */
-        {  6, 30, 58, 86,114,142,  0 }, /* 33 */
-        {  6, 34, 62, 90,118,146,  0 }, /* 34 */
-        {  6, 30, 54, 78,102,126,150 }, /* 35 */
-        {  6, 24, 50, 76,102,128,154 }, /* 36 */
-        {  6, 28, 54, 80,106,132,158 }, /* 37 */
-        {  6, 32, 58, 84,110,136,162 }, /* 38 */
-        {  6, 26, 54, 82,110,138,166 }, /* 39 */
-        {  6, 30, 58, 86,114,142,170 }, /* 40 */
-};
+struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
+                                 unsigned int mask)
+{
+        struct qr_bitmap * bmp;
+        int i, j;
+
+        if (mask & ~0x7)
+                return 0;
+
+        bmp = qr_bitmap_clone(orig);
+        if (!bmp)
+                return 0;
+
+        /* Slow version for now; we can optimize later */
+
+        for (i = 0; i < bmp->height; ++i) {
+                unsigned char * p = bmp->bits + i * bmp->stride;
+
+                for (j = 0; j < bmp->width; ++j) {
+                        int bit = j % CHAR_BIT;
+                        size_t off = j / CHAR_BIT;
+                        int t;
+
+                        switch (mask) {
+                        case 0: t = (i + j) % 2; break;
+                        case 1: t = i % 2; break;
+                        case 2: t = j % 3; break;
+                        case 3: t = (i + j) % 3; break;
+                        case 4: t = (i/2 + j/3) % 2; break;
+                        case 5: t = ((i*j) % 2) + ((i*j) % 3); break;
+                        case 6: t = (((i*j) % 2) + ((i*j) % 3)) % 2; break;
+                        case 7: t = (((i*j) % 3) + ((i+j) % 2)) % 2; break;
+                        }
+
+                        p[off] ^= (t == 0) << bit;
+                }
+        }
+
+        return bmp;
+}
 

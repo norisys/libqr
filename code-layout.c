@@ -2,9 +2,11 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <qr/bitmap.h>
-#include "code-common.h"
-#include "code-layout.h"
+#include <qr/code.h>
+#include <qr/layout.h>
+#include "constants.h"
 
 struct qr_iterator {
         struct qr_code * code;

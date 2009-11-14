@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <assert.h>
 
-#include "qr-bitstream.h"
+#include <qr/bitstream.h>
 
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #define MIN(a, b) ((a) > (b) ? (b) : (a))

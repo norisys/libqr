@@ -1,18 +1,16 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <assert.h>
-#include <qr/code.h>
 
-#include "code-common.h"
-#include "code-layout.h"
-#include "data-common.h"
-#include "qr-mask.h"
-#include "rs.h"
+#include <qr/bitmap.h>
+#include <qr/bitstream.h>
+#include <qr/code.h>
+#include <qr/data.h>
+#include <qr/layout.h>
+#include "constants.h"
+#include "galois.h"
 
 #define MIN(a, b) ((b) < (a) ? (b) : (a))
-
-extern const int QR_DATA_WORD_COUNT[40][4];
-extern const int QR_RS_BLOCK_COUNT[40][4][2];
 
 static int mask_data(struct qr_code * code);
 static int score_mask(const struct qr_bitmap * bmp);
@@ -28,11 +26,6 @@ static int draw_format(struct qr_bitmap * bmp,
                         int mask);
 static int calc_format_bits(enum qr_ec_level ec, int mask);
 static long calc_version_bits(int version);
-static unsigned long gal_residue(unsigned long a, unsigned long m);
-
-/* FIXME: the static functions should be in a better
- * order, with prototypes.
- */
 
 #include <stdio.h>
 static void x_dump(struct qr_bitstream * bits)
@@ -175,7 +168,7 @@ static struct qr_bitstream * make_data(int version,
                                        enum qr_ec_level   ec,
                                        struct qr_bitstream * data)
 {
-        const size_t total_bits = code_total_capacity(version);
+        const size_t total_bits = qr_code_total_capacity(version);
         const size_t total_words = total_bits / 8;
         const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
         size_t total_blocks, block_count[2], data_words, rs_words;
@@ -575,7 +568,7 @@ static int calc_format_bits(enum qr_ec_level ec, int mask)
          */
 
         bits <<= 15 - 5;
-        bits |= (unsigned int)gal_residue(bits, 0x537);
+        bits |= (unsigned int)gf_residue(bits, 0x537);
 
         /* XOR mask: 101 0100 0001 0010 */
         bits ^= 0x5412;
@@ -593,37 +586,8 @@ static long calc_version_bits(int version)
          *   G(x) = x^12 + x^11 + x^10 + x^9 + x^8 + x^5 + x^2 + 1
          */
         bits <<= 18 - 6;
-        bits |= gal_residue(bits, 0x1F25);
+        bits |= gf_residue(bits, 0x1F25);
 
         return bits;
-}
-
-/* Calculate the residue of a modulo m */
-static unsigned long gal_residue(unsigned long a,
-                                   unsigned long m)
-{
-        unsigned long o = 1;
-        int n = 1;
-
-        /* Find one past the highest bit of the modulus */
-        while (m & ~(o - 1))
-                o <<= 1;
-
-        /* Find the highest n such that O(m * x^n) <= O(a) */
-        while (a & ~(o - 1)) {
-                o <<= 1;
-                ++n;
-        }
-
-        /* For each n, try to reduce a by (m * x^n) */
-        while (n--) {
-                o >>= 1;
-
-                /* o is the highest bit of (m * x^n) */
-                if (a & o)
-                        a ^= m << n;
-        }
-
-        return a;
 }
 

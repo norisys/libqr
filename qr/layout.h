@@ -1,5 +1,5 @@
-#ifndef CODE_LAYOUT_H
-#define CODE_LAYOUT_H
+#ifndef QR_CODE_LAYOUT_H
+#define QR_CODE_LAYOUT_H
 
 struct qr_iterator;
 

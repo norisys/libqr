@@ -2,16 +2,12 @@
  * Not "pure" C - only works with ASCII
  */
 
-/** XXX: check that the data will fit! **/
-
 #include <ctype.h>
 #include <stdlib.h>
+
+#include <qr/bitstream.h>
 #include <qr/data.h>
-
-#include "qr-bitstream.h"
-#include "data-common.h"
-
-extern const int QR_DATA_WORD_COUNT[40][4];
+#include "constants.h"
 
 static void write_type_and_length(struct qr_data *  data,
                                   enum qr_data_type type,
@@ -19,7 +15,7 @@ static void write_type_and_length(struct qr_data *  data,
 {
         (void)qr_bitstream_write(data->bits, QR_TYPE_CODES[type], 4);
         (void)qr_bitstream_write(data->bits, length,
-                get_size_field_length(data->version, type));
+                qr_data_size_field_length(data->version, type));
 }
 
 static struct qr_data * encode_numeric(struct qr_data * data,
@@ -29,7 +25,7 @@ static struct qr_data * encode_numeric(struct qr_data * data,
         struct qr_bitstream * stream = data->bits;
         size_t bits;
 
-        bits = 4 + get_size_field_length(data->version, QR_DATA_NUMERIC)
+        bits = 4 + qr_data_size_field_length(data->version, QR_DATA_NUMERIC)
                  + qr_data_dpart_length(QR_DATA_NUMERIC, length);
 
         stream = data->bits;
@@ -102,7 +98,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
         struct qr_bitstream * stream = data->bits;
         size_t bits;
 
-        bits = 4 + get_size_field_length(data->version, QR_DATA_ALPHA)
+        bits = 4 + qr_data_size_field_length(data->version, QR_DATA_ALPHA)
                  + qr_data_dpart_length(QR_DATA_ALPHA, length);
 
         stream = data->bits;
@@ -145,7 +141,7 @@ static struct qr_data * encode_8bit(struct qr_data * data,
         struct qr_bitstream * stream = data->bits;
         size_t bits;
 
-        bits = 4 + get_size_field_length(data->version, QR_DATA_8BIT)
+        bits = 4 + qr_data_size_field_length(data->version, QR_DATA_8BIT)
                  + qr_data_dpart_length(QR_DATA_8BIT, length);
 
         stream = data->bits;
@@ -178,7 +174,7 @@ static int calc_min_version(enum qr_data_type type,
         dbits = qr_data_dpart_length(type, length);
 
         for (version = 1; version <= 40; ++version) {
-                if (4 + dbits + get_size_field_length(version, type)
+                if (4 + dbits + qr_data_size_field_length(version, type)
                     < 8 * QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1])
                         return version;
         }

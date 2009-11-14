@@ -1,27 +1,7 @@
 #include <stdlib.h>
+
+#include <qr/bitstream.h>
 #include <qr/data.h>
-
-#include "qr-bitstream.h"
-#include "data-common.h"
-
-const enum qr_data_type QR_TYPE_CODES[16] = {
-        QR_DATA_INVALID,        /* 0000 */
-        QR_DATA_NUMERIC,        /* 0001 */
-        QR_DATA_ALPHA,          /* 0010 */
-        QR_DATA_MIXED,          /* 0011 */
-        QR_DATA_8BIT,           /* 0100 */
-        QR_DATA_FNC1,           /* 0101 */
-        QR_DATA_INVALID,        /* 0110 */
-        QR_DATA_ECI,            /* 0111 */
-        QR_DATA_KANJI,          /* 1000 */
-        QR_DATA_FNC1,           /* 1001 */
-        QR_DATA_INVALID,        /* 1010 */
-        QR_DATA_INVALID,        /* 1011 */
-        QR_DATA_INVALID,        /* 1100 */
-        QR_DATA_INVALID,        /* 1101 */
-        QR_DATA_INVALID,        /* 1110 */
-        QR_DATA_INVALID,        /* 1111 */
-};
 
 void qr_free_data(struct qr_data * data)
 {
@@ -29,7 +9,7 @@ void qr_free_data(struct qr_data * data)
         free(data);
 }
 
-size_t get_size_field_length(int version, enum qr_data_type type)
+size_t qr_data_size_field_length(int version, enum qr_data_type type)
 {
         static const size_t QR_SIZE_LENGTHS[3][4] = {
                 { 10,  9,  8,  8 },

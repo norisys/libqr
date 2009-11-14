@@ -1,7 +1,37 @@
 #include <assert.h>
 #include <stdlib.h>
-#include "qr-bitstream.h"
-#include "rs.h"
+
+#include <qr/bitstream.h>
+#include "galois.h"
+
+/* Calculate the residue of a modulo m */
+unsigned long gf_residue(unsigned long a,
+                         unsigned long m)
+{
+        unsigned long o = 1;
+        int n = 1;
+
+        /* Find one past the highest bit of the modulus */
+        while (m & ~(o - 1))
+                o <<= 1;
+
+        /* Find the highest n such that O(m * x^n) <= O(a) */
+        while (a & ~(o - 1)) {
+                o <<= 1;
+                ++n;
+        }
+
+        /* For each n, try to reduce a by (m * x^n) */
+        while (n--) {
+                o >>= 1;
+
+                /* o is the highest bit of (m * x^n) */
+                if (a & o)
+                        a ^= m << n;
+        }
+
+        return a;
+}
 
 static unsigned int gf_mult(unsigned int a, unsigned int b)
 {

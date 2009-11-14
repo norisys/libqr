@@ -1,16 +1,15 @@
+#include <assert.h>
 #include <ctype.h>
+#include <getopt.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include <limits.h>
-#include <getopt.h>
+
 #include <qr/bitmap.h>
+#include <qr/bitstream.h>
 #include <qr/code.h>
 #include <qr/data.h>
-
-#include "qr-bitstream.h"
-#include "code-common.h"
 
 struct config {
         int               version;

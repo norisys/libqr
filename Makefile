@@ -1,4 +1,6 @@
-OBJECTS :=      capacity.o              \
+OBJECTS :=      bitmap.o                \
+                bitstream.o             \
+                constants.o             \
                 code-common.o           \
                 code-create.o           \
                 code-layout.o           \
@@ -6,11 +8,7 @@ OBJECTS :=      capacity.o              \
                 data-common.o           \
                 data-create.o           \
                 data-parse.o            \
-                qr-bitmap.o             \
-                qr-bitmap-render.o      \
-                qr-bitstream.o          \
-                qr-mask.o               \
-                rs-encode.o
+                galois.o
 
 CFLAGS := -std=c89 -pedantic -I. -Wall
 CFLAGS += -g

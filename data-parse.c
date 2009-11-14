@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <qr/data.h>
 
-#include "qr-bitstream.h"
-#include "data-common.h"
+#include <qr/bitstream.h>
+#include <qr/data.h>
+#include "constants.h"
 
 static enum qr_data_type read_data_type(struct qr_bitstream * stream)
 {
@@ -33,7 +33,7 @@ static enum qr_data_type parse_numeric(const struct qr_data * data,
         stream = data->bits;
         buffer = 0;
 
-        field_len = get_size_field_length(data->version, QR_DATA_NUMERIC);
+        field_len = qr_data_size_field_length(data->version, QR_DATA_NUMERIC);
         if (qr_bitstream_remaining(stream) < field_len)
                 goto invalid;
 
@@ -93,7 +93,7 @@ static enum qr_data_type parse_alpha(const struct qr_data * data,
         stream = data->bits;
         buffer = 0;
 
-        field_len = get_size_field_length(data->version, QR_DATA_ALPHA);
+        field_len = qr_data_size_field_length(data->version, QR_DATA_ALPHA);
         if (qr_bitstream_remaining(stream) < field_len)
                 goto invalid;
 
@@ -150,7 +150,7 @@ static enum qr_data_type parse_8bit(const struct qr_data * data,
 
         stream = data->bits;
 
-        field_len = get_size_field_length(data->version, QR_DATA_8BIT);
+        field_len = qr_data_size_field_length(data->version, QR_DATA_8BIT);
         if (qr_bitstream_remaining(stream) < field_len)
                 return QR_DATA_INVALID;
 
@@ -181,7 +181,7 @@ static enum qr_data_type parse_kanji(const struct qr_data * data,
         return QR_DATA_INVALID;
 }
 
-enum qr_data_type qr_get_data_type(const struct qr_data * data)
+enum qr_data_type qr_data_type(const struct qr_data * data)
 {
         qr_bitstream_seek(data->bits, data->offset);
         return read_data_type(data->bits);
@@ -201,7 +201,7 @@ int qr_get_data_length(const struct qr_data * data)
         case QR_DATA_ALPHA:
         case QR_DATA_8BIT:
         case QR_DATA_KANJI:
-                field_len = get_size_field_length(data->version, type);
+                field_len = qr_data_size_field_length(data->version, type);
                 break;
         default:
                 /* unsupported / invalid */
