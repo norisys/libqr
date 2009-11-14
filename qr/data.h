@@ -22,7 +22,7 @@ enum qr_ec_level {
         QR_EC_LEVEL_H = 0x2
 };
 
-struct qr_data * qr_create_data(int               format, /* 1 ~ 40 */
+struct qr_data * qr_create_data(int               format, /* 1 ~ 40; 0=auto */
                                 enum qr_ec_level  ec,
                                 enum qr_data_type type,
                                 const char *      input,

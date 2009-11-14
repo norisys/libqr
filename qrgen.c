@@ -133,7 +133,7 @@ void show_help() {
 
 void set_default_config(struct config * conf)
 {
-        conf->version = 1;
+        conf->version = 0;
         conf->ec = QR_EC_LEVEL_M;
         conf->dtype = QR_DATA_NUMERIC;
         conf->ansi = 1;

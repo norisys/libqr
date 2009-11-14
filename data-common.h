@@ -16,5 +16,7 @@ extern const enum qr_data_type QR_TYPE_CODES[16];
 
 size_t get_size_field_length(int version, enum qr_data_type);
 
+size_t qr_data_dpart_length(enum qr_data_type type, size_t nchars);
+
 #endif
 

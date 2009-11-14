@@ -11,6 +11,8 @@
 #include "qr-bitstream.h"
 #include "data-common.h"
 
+extern const int QR_DATA_WORD_COUNT[40][4];
+
 static void write_type_and_length(struct qr_data *  data,
                                   enum qr_data_type type,
                                   size_t            length)
@@ -28,12 +30,7 @@ static struct qr_data * encode_numeric(struct qr_data * data,
         size_t bits;
 
         bits = 4 + get_size_field_length(data->version, QR_DATA_NUMERIC)
-                 + 10 * (length / 3);
-
-        if (length % 3 == 1)
-                bits += 4;
-        else if (length % 3 == 2)
-                bits += 7;
+                 + qr_data_dpart_length(QR_DATA_NUMERIC, length);
 
         stream = data->bits;
         if (qr_bitstream_resize(stream,
@@ -106,8 +103,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
         size_t bits;
 
         bits = 4 + get_size_field_length(data->version, QR_DATA_ALPHA)
-                 + 11 * (length / 2)
-                 + 6 * (length % 2);
+                 + qr_data_dpart_length(QR_DATA_ALPHA, length);
 
         stream = data->bits;
         if (qr_bitstream_resize(stream,
@@ -150,7 +146,7 @@ static struct qr_data * encode_8bit(struct qr_data * data,
         size_t bits;
 
         bits = 4 + get_size_field_length(data->version, QR_DATA_8BIT)
-                 + 8 * length;
+                 + qr_data_dpart_length(QR_DATA_8BIT, length);
 
         stream = data->bits;
         if (qr_bitstream_resize(stream,
@@ -172,6 +168,24 @@ static struct qr_data * encode_kanji(struct qr_data * data,
         return 0;
 }
 
+static int calc_min_version(enum qr_data_type type,
+                            enum qr_ec_level ec,
+                            size_t length)
+{
+        size_t dbits;
+        int version;
+
+        dbits = qr_data_dpart_length(type, length);
+
+        for (version = 1; version <= 40; ++version) {
+                if (4 + dbits + get_size_field_length(version, type)
+                    < 8 * QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1])
+                        return version;
+        }
+
+        return -1;
+}
+
 struct qr_data * qr_create_data(int               version,
                                 enum qr_ec_level  ec,
                                 enum qr_data_type type,
@@ -179,8 +193,14 @@ struct qr_data * qr_create_data(int               version,
                                 size_t            length)
 {
         struct qr_data * data;
+        int minver;
 
-        if (version < 1 || version > 40)
+        minver = calc_min_version(type, ec, length);
+
+        if (version == 0)
+                version = minver;
+
+        if (minver < 0 || version < minver)
                 return 0;
 
         data = malloc(sizeof(*data));
@@ -220,5 +240,34 @@ struct qr_data * qr_create_data(int               version,
                 free(data);
                 return 0;
         }
+}
+
+size_t qr_data_dpart_length(enum qr_data_type type, size_t length)
+{
+        size_t bits;
+
+        switch (type) {
+        case QR_DATA_NUMERIC:
+                bits = 10 * (length / 3);
+                if (length % 3 == 1)
+                        bits += 4;
+                else if (length % 3 == 2)
+                        bits += 7;
+                break;
+        case QR_DATA_ALPHA:
+                bits = 11 * (length / 2)
+                        + 6 * (length % 2);
+                break;
+        case QR_DATA_8BIT:
+                bits = 8 * length;
+                break;
+        case QR_DATA_KANJI:
+                /* unsupported */
+        default:
+                /* unsupported; will be ignored */
+                bits = 0;
+        }
+
+        return bits;
 }
 
