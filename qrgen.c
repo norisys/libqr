@@ -41,10 +41,10 @@ struct qr_code * create(int               version,
         }
 
         code = qr_code_create(data);
+        qr_free_data(data);
 
         if (!code) {
                 perror("Failed to create code");
-                qr_free_data(data);
                 exit(2);
         }
 
