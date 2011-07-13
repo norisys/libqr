@@ -527,7 +527,7 @@ static int draw_format(struct qr_bitmap * bmp,
 
         for (i = 0; i < 8; ++i) {
                 if (bits & 0x1) {
-                        setpx(bmp, 8, i);
+                        setpx(bmp, 8, i + (i > 5));
                         setpx(bmp, dim - 1 - i, 8);
                 }
                 bits >>= 1;
