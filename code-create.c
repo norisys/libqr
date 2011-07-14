@@ -172,7 +172,8 @@ static struct qr_bitstream * make_data(int version,
         const size_t total_bits = qr_code_total_capacity(version);
         const size_t total_words = total_bits / 8;
         const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
-        size_t total_blocks, block_count[2], data_words, rs_words;
+        int block_count[2], data_length[2], ec_length[2];
+        int total_blocks;
         size_t i, w;
         struct qr_bitstream * dcopy = 0;
         struct qr_bitstream * out = 0;
@@ -186,14 +187,8 @@ static struct qr_bitstream * make_data(int version,
         if (qr_bitstream_resize(out, total_bits) != 0)
                 goto fail;
 
-        /* XXX: 14-M will be incorrect */
-        block_count[0] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][0];
-        block_count[1] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][1];
+        qr_get_rs_block_sizes(version, ec, block_count, data_length, ec_length);
         total_blocks = block_count[0] + block_count[1];
-        data_words = total_data / total_blocks;
-        rs_words = total_words / total_blocks - data_words;
-        assert((data_words + rs_words) * block_count[0] +
-               (data_words + rs_words + 1) * block_count[1] == total_words);
 
         /* Make a copy of the data and pad it */
         dcopy = qr_bitstream_dup(data);
@@ -207,17 +202,20 @@ static struct qr_bitstream * make_data(int version,
         x_dump(dcopy);
 
         /* Make space for the RS blocks */
-        blocks = calloc(total_blocks, sizeof(*blocks));
+        blocks = malloc(total_blocks * sizeof(*blocks));
         if (!blocks)
                 goto fail;
+        for (i = 0; i < total_blocks; ++i)
+                blocks[i] = NULL;
 
         /* Generate RS codewords */
         qr_bitstream_seek(dcopy, 0);
         fputs("Generate RS blocks:\n", stderr);
         for (i = 0; i < total_blocks; ++i) {
-                size_t dw = data_words + (i >= block_count[0]);
-
-                blocks[i] = rs_generate_words(dcopy, dw, rs_words);
+                int type = (i >= block_count[0]);
+                blocks[i] = rs_generate_words(dcopy,
+                                              data_length[type],
+                                              ec_length[type]);
                 if (!blocks[i]) {
                         while (i--)
                                 qr_bitstream_destroy(blocks[i]);
@@ -229,11 +227,13 @@ static struct qr_bitstream * make_data(int version,
         }
 
         /* Finally, write everything out in the correct order */
-        for (w = 0; w < data_words + 1; ++w) {
-                for (i = (w == data_words ? block_count[0] : 0); i < total_blocks; ++i) {
-                        size_t di = w + (i < block_count[0] ?
-                                i * data_words :
-                                i * (data_words + 1) - block_count[0]);
+        assert(block_count[1] == 0 || data_length[1] >= data_length[0]);
+        for (w = 0; w < data_length[block_count[1] ? 1 : 0]; ++w) {
+                for (i = (w >= data_length[0] ? block_count[0] : 0); i < total_blocks; ++i) {
+                        long di = w + i * data_length[0]
+                                + (i > block_count[0] ?
+                                        (i - block_count[0]) * (data_length[1] - data_length[0])
+                                        : 0);
 
                         qr_bitstream_seek(dcopy, di * 8);
                         qr_bitstream_write(out,
@@ -242,7 +242,8 @@ static struct qr_bitstream * make_data(int version,
         }
         for (i = 0; i < total_blocks; ++i)
                 qr_bitstream_seek(blocks[i], 0);
-        for (w = 0; w < rs_words; ++w)
+        assert(block_count[1] == 0 || ec_length[1] == ec_length[0]);
+        for (w = 0; w < ec_length[0]; ++w)
                 for (i = 0; i < total_blocks; ++i)
                         qr_bitstream_write(out,
                                 qr_bitstream_read(blocks[i], 8), 8);

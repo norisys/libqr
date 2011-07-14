@@ -31,24 +31,19 @@ static int unpack_bits(int version,
         /* FIXME: less math here (get the values from a common helper fn) */
         /* FIXME: more comments to explain the algorithm */
 
-        const size_t total_bits = qr_code_total_capacity(version);
-        const size_t total_words = total_bits / 8;
-        const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
-        int total_blocks, block_count[2], row_length[2], data_words, rs_words;
+        int total_words = qr_code_total_capacity(version) / 8;
+        int block_count[2], data_length[2], ec_length[2];
+        int total_blocks;
         int i, w, block;
         struct qr_bitstream ** blocks = 0;
 
-        /* copied from make_data */
-        block_count[0] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][0];
-        block_count[1] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][1];
+        qr_get_rs_block_sizes(version, ec, block_count, data_length, ec_length);
         total_blocks = block_count[0] + block_count[1];
-        data_words = total_data / total_blocks;
-        rs_words = total_words / total_blocks - data_words;
-        assert((data_words + rs_words) * block_count[0] +
-               (data_words + rs_words + 1) * block_count[1] == total_words);
 
-        blocks = calloc(total_blocks, sizeof(*blocks));
+        blocks = malloc(total_blocks * sizeof(*blocks));
         /* XXX: check return (and below) */
+        for (i = 0; i < total_blocks; ++i)
+                blocks[i] = NULL;
 
         for (i = 0; i < total_blocks; ++i)
                 blocks[i] = qr_bitstream_create();
@@ -57,16 +52,12 @@ static int unpack_bits(int version,
 
         qr_bitstream_seek(raw_bits, 0);
 
-        /* XXX: 14-M will be incorrect */
-        row_length[0] = data_words;
-        row_length[1] = block_count[1] > 0 ? (total_data - row_length[0] * block_count[0]) / block_count[1] : 0;
-
         fprintf(stderr, "block counts %d and %d\n", block_count[0], block_count[1]);
-        fprintf(stderr, "row lengths %d and %d\n", row_length[0], row_length[1]);
+        fprintf(stderr, "row lengths %d and %d\n", data_length[0], data_length[1]);
 
         block = 0;
         for (w = 0; w < total_words; ++w) {
-                if (block == 0 && w / total_blocks == row_length[0] && block_count[1] != 0) {
+                if (block == 0 && w / total_blocks >= data_length[0] && block_count[1] != 0) {
                         /* Skip the short blocks, if there are any */
                         block += block_count[0];
                 }
@@ -77,12 +68,10 @@ static int unpack_bits(int version,
         /* XXX: apply ec */
 
         for (block = 0; block < total_blocks; ++block) {
+                int type = (block >= block_count[0]);
                 struct qr_bitstream * stream = blocks[block];
                 qr_bitstream_seek(stream, 0);
-                for (w = 0; w < row_length[block >= block_count[0]]; ++w)
-                        qr_bitstream_write(bits_out,
-                                           qr_bitstream_read(stream, 8),
-                                           8);
+                qr_bitstream_copy(bits_out, stream, data_length[type] * 8);
                 qr_bitstream_destroy(stream);
         }
         free(blocks);

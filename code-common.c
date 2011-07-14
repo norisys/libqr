@@ -2,9 +2,11 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <qr/code.h>
 #include <qr/bitmap.h>
 #include <qr/bitstream.h>
+#include <qr/code.h>
+#include <qr/common.h>
+#include "constants.h"
 
 void qr_code_destroy(struct qr_code * code)
 {
@@ -39,6 +41,37 @@ size_t qr_code_total_capacity(int version)
 		+ alignment_count * 5*5;
 
 	return side * side - function_bits;
+}
+
+void qr_get_rs_block_sizes(int version,
+                           enum qr_ec_level ec,
+                           int block_count[2],
+                           int data_length[2],
+                           int ec_length[2])
+{
+        /* FIXME: rather than using a big static table, better to
+         * calculate these values.
+         */
+        int total_words = qr_code_total_capacity(version) / 8;
+        int data_words = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
+        int ec_words = total_words - data_words;
+        int total_blocks;
+
+        block_count[0] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][0];
+        block_count[1] = QR_RS_BLOCK_COUNT[version - 1][ec ^ 0x1][1];
+        total_blocks = block_count[0] + block_count[1];
+
+        data_length[0] = data_words / total_blocks;
+        data_length[1] = data_length[0] + 1;
+
+        assert(data_length[0] * block_count[0] +
+               data_length[1] * block_count[1] == data_words);
+
+        ec_length[0] = ec_length[1] = ec_words / total_blocks;
+
+        assert(ec_length[0] * block_count[0] +
+               ec_length[1] * block_count[1] == ec_words);
+        assert(data_words + ec_words == total_words);
 }
 
 struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
