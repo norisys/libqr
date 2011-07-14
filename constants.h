@@ -1,7 +1,7 @@
 #ifndef QR_CONSTANTS_H
 #define QR_CONSTANTS_H
 
-#include <qr/data.h>
+#include <qr/types.h>
 
 extern const int QR_ALIGNMENT_LOCATION[40][7];
 extern const int QR_DATA_WORD_COUNT[40][4];

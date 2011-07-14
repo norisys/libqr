@@ -5,6 +5,7 @@
 #include <qr/bitmap.h>
 #include <qr/bitstream.h>
 #include <qr/code.h>
+#include <qr/common.h>
 #include <qr/data.h>
 #include <qr/layout.h>
 #include "constants.h"

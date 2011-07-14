@@ -13,12 +13,5 @@ struct qr_code * qr_code_create(const struct qr_data * data);
 
 void qr_code_destroy(struct qr_code *);
 
-int qr_code_width(const struct qr_code *);
-
-size_t qr_code_total_capacity(int version);
-
-struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
-                                 unsigned int mask);
-
 #endif
 
