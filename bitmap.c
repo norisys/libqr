@@ -49,6 +49,16 @@ void qr_bitmap_destroy(struct qr_bitmap * bmp)
         }
 }
 
+int qr_bitmap_add_mask(struct qr_bitmap * bmp)
+{
+        size_t size = bmp->stride * bmp->width;
+        bmp->mask = malloc(size);
+        if (!bmp->mask)
+                return -1;
+        memset(bmp->mask, 0xFF, size);
+        return 0;
+}
+
 struct qr_bitmap * qr_bitmap_clone(const struct qr_bitmap * src)
 {
         struct qr_bitmap * bmp;

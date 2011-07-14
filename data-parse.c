@@ -220,6 +220,9 @@ enum qr_data_type qr_parse_data(const struct qr_data * input,
 {
         qr_bitstream_seek(input->bits, input->offset);
 
+        *output = NULL;
+        *length = 0;
+
         switch (read_data_type(input->bits)) {
         case QR_DATA_NUMERIC:
                 return parse_numeric(input, output, length);

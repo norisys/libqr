@@ -17,11 +17,6 @@ int qr_code_width(const struct qr_code *);
 
 size_t qr_code_total_capacity(int version);
 
-struct qr_code * qr_code_parse(const void * buffer,
-                               size_t       line_bits,
-                               size_t       line_stride,
-                               size_t       line_count);
-
 struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
                                  unsigned int mask);
 

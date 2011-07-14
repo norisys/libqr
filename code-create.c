@@ -588,6 +588,7 @@ static long calc_version_bits(int version)
         bits <<= 18 - 6;
         bits |= gf_residue(bits, 0x1F25);
 
+fprintf(stderr, "version bits: %lx\n", bits);
         return bits;
 }
 

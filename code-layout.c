@@ -26,6 +26,9 @@ void qr_layout_init_mask(struct qr_code * code)
         const int * am_pos = QR_ALIGNMENT_LOCATION[code->version - 1];
         int am_side;
 
+        if (!bmp->mask)
+                qr_bitmap_add_mask(bmp);
+
         assert(bmp->mask);
 
         memset(bmp->mask, 0, bmp->height * bmp->stride);
@@ -164,9 +167,8 @@ unsigned int qr_layout_read(struct qr_iterator * i)
         int b;
 
         for (b = 0; b < 8; ++b) {
-                x |= (*i->p & i->mask) ? 1 : 0;
+                x = (x << 1) | ((*i->p & i->mask) ? 1 : 0);
                 advance(i);
-                x <<= 1;
         }
 
         return x;
