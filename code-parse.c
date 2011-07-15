@@ -30,7 +30,7 @@ static int unpack_bits(int version,
 {
         /* FIXME: more comments to explain the algorithm */
 
-        int total_words = qr_code_total_capacity(version) / 8;
+        int total_words = qr_code_total_capacity(version) / QR_WORD_BITS;
         int block_count[2], data_length[2], ec_length[2];
         int total_blocks;
         int i, w, block;
@@ -42,7 +42,7 @@ static int unpack_bits(int version,
 
         status = qr_bitstream_resize(bits_out,
                 (block_count[0] * data_length[0] +
-                 block_count[1] * data_length[1]) * 8);
+                 block_count[1] * data_length[1]) * QR_WORD_BITS);
         if (status != 0)
                 goto cleanup;
 
@@ -60,7 +60,7 @@ static int unpack_bits(int version,
                 if (blocks[i] == NULL)
                         goto cleanup;
                 status = qr_bitstream_resize(blocks[i],
-                        (data_length[type] + ec_length[type]) * 8);
+                        (data_length[type] + ec_length[type]) * QR_WORD_BITS);
                 if (status != 0)
                         goto cleanup;
         }
@@ -78,7 +78,7 @@ static int unpack_bits(int version,
                         /* Skip the short blocks, if there are any */
                         block += block_count[0];
                 }
-                qr_bitstream_write(blocks[block], qr_bitstream_read(raw_bits, 8), 8);
+                qr_bitstream_copy(blocks[block], raw_bits, QR_WORD_BITS);
                 block = (block + 1) % total_blocks;
         }
 
@@ -88,7 +88,7 @@ static int unpack_bits(int version,
                 int type = (block >= block_count[0]);
                 struct qr_bitstream * stream = blocks[block];
                 qr_bitstream_seek(stream, 0);
-                qr_bitstream_copy(bits_out, stream, data_length[type] * 8);
+                qr_bitstream_copy(bits_out, stream, data_length[type] * QR_WORD_BITS);
         }
         status = 0;
 
@@ -108,7 +108,7 @@ static int read_bits(const struct qr_code * code,
                      struct qr_bitstream * data_bits)
 {
         const size_t total_bits = qr_code_total_capacity(code->version);
-        const size_t total_words = total_bits / 8;
+        const size_t total_words = total_bits / QR_WORD_BITS;
         struct qr_bitstream * raw_bits;
         struct qr_iterator * layout;
         int w;
@@ -118,7 +118,7 @@ static int read_bits(const struct qr_code * code,
         if (raw_bits == NULL)
                 goto cleanup;
 
-        ret = qr_bitstream_resize(raw_bits, total_words * 8);
+        ret = qr_bitstream_resize(raw_bits, total_words * QR_WORD_BITS);
         if (ret != 0)
                 goto cleanup;
 
@@ -126,7 +126,7 @@ static int read_bits(const struct qr_code * code,
         if (layout == NULL)
                 goto cleanup;
         for (w = 0; w < total_words; ++w)
-                qr_bitstream_write(raw_bits, qr_layout_read(layout), 8);
+                qr_bitstream_write(raw_bits, qr_layout_read(layout), QR_WORD_BITS);
         qr_layout_end(layout);
 
         ret = unpack_bits(code->version, ec, raw_bits, data_bits);
@@ -294,7 +294,7 @@ cleanup:
 
 int qr_decode_format(unsigned bits, enum qr_ec_level * ec, int * mask)
 {
-        bits ^= 0x5412;
+        bits ^= QR_FORMAT_MASK;
 
         /* TODO: check and fix errors */
 
@@ -321,7 +321,7 @@ int qr_decode_version(unsigned long bits, int * version)
                 /* see calc_version_bits() */
                 version_bits = v;
                 version_bits <<= 12;
-                version_bits |= gf_residue(version_bits, 0x1F25);
+                version_bits |= gf_residue(version_bits, QR_VERSION_POLY);
 
                 /* count errors */
                 errors = 0;

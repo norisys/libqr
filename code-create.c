@@ -170,7 +170,6 @@ static struct qr_bitstream * make_data(int version,
                                        struct qr_bitstream * data)
 {
         const size_t total_bits = qr_code_total_capacity(version);
-        const size_t total_words = total_bits / 8;
         const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
         int block_count[2], data_length[2], ec_length[2];
         int total_blocks;
@@ -195,7 +194,7 @@ static struct qr_bitstream * make_data(int version,
         if (!dcopy)
                 goto fail;
 
-        if (pad_data(dcopy, total_data * 8) != 0)
+        if (pad_data(dcopy, total_data * QR_WORD_BITS) != 0)
                 goto fail;
 
         fputs("Pad data:\n", stderr);
@@ -235,9 +234,8 @@ static struct qr_bitstream * make_data(int version,
                                         (i - block_count[0]) * (data_length[1] - data_length[0])
                                         : 0);
 
-                        qr_bitstream_seek(dcopy, di * 8);
-                        qr_bitstream_write(out,
-                                qr_bitstream_read(dcopy, 8), 8);
+                        qr_bitstream_seek(dcopy, di * QR_WORD_BITS);
+                        qr_bitstream_copy(out, dcopy, QR_WORD_BITS);
                 }
         }
         for (i = 0; i < total_blocks; ++i)
@@ -245,10 +243,9 @@ static struct qr_bitstream * make_data(int version,
         assert(block_count[1] == 0 || ec_length[1] == ec_length[0]);
         for (w = 0; w < ec_length[0]; ++w)
                 for (i = 0; i < total_blocks; ++i)
-                        qr_bitstream_write(out,
-                                qr_bitstream_read(blocks[i], 8), 8);
+                        qr_bitstream_copy(out, blocks[i], QR_WORD_BITS);
 
-        qr_bitstream_write(out, 0, total_bits - total_words * 8);
+        qr_bitstream_write(out, 0, total_bits % QR_WORD_BITS);
 
         fputs("Final bitstream:\n", stderr);
         x_dump(out);
@@ -299,8 +296,8 @@ struct qr_code * qr_code_create(const struct qr_data * data)
                 goto fail;
 
         qr_bitstream_seek(bits, 0);
-        while (qr_bitstream_remaining(bits) >= 8)
-                qr_layout_write(layout, qr_bitstream_read(bits, 8));
+        while (qr_bitstream_remaining(bits) >= QR_WORD_BITS)
+                qr_layout_write(layout, qr_bitstream_read(bits, QR_WORD_BITS));
         qr_layout_end(layout);
 
         mask = mask_data(code);
@@ -566,15 +563,12 @@ static int calc_format_bits(enum qr_ec_level ec, int mask)
 
         bits = (ec & 0x3) << 3 | (mask & 0x7);
 
-        /* Compute (15, 5) BCH code with
-         *   G(x) = x^10 + x^8 + x^5 + x^4 + x^2 + x + 1
-         */
+        /* Compute (15, 5) BCH code */
 
         bits <<= 15 - 5;
-        bits |= (unsigned int)gf_residue(bits, 0x537);
+        bits |= (unsigned int)gf_residue(bits, QR_FORMAT_POLY);
 
-        /* XOR mask: 101 0100 0001 0010 */
-        bits ^= 0x5412;
+        bits ^= QR_FORMAT_MASK;
 
         return bits;
 }
@@ -585,11 +579,10 @@ static long calc_version_bits(int version)
 
         bits = version & 0x3F;
 
-        /* (18, 6) BCH code
-         *   G(x) = x^12 + x^11 + x^10 + x^9 + x^8 + x^5 + x^2 + 1
-         */
+        /* (18, 6) BCH code */
+
         bits <<= 18 - 6;
-        bits |= gf_residue(bits, 0x1F25);
+        bits |= gf_residue(bits, QR_VERSION_POLY);
 
 fprintf(stderr, "version bits: %lx\n", bits);
         return bits;

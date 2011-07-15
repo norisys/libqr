@@ -167,7 +167,7 @@ unsigned int qr_layout_read(struct qr_iterator * i)
         unsigned int x = 0;
         int b;
 
-        for (b = 0; b < 8; ++b) {
+        for (b = 0; b < QR_WORD_BITS; ++b) {
                 x = (x << 1) | ((*i->p & i->mask) ? 1 : 0);
                 advance(i);
         }
@@ -179,7 +179,7 @@ void qr_layout_write(struct qr_iterator * i, unsigned int x)
 {
         int b;
 
-        for (b = 0; b < 8; ++b) {
+        for (b = 0; b < QR_WORD_BITS; ++b) {
                 *i->p |= (x & 0x80) ? i->mask : 0;
                 advance(i);
                 x <<= 1;
