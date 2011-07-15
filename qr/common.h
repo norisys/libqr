@@ -3,8 +3,7 @@
 
 #include <qr/types.h>
 
-struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
-                                 unsigned int mask);
+void qr_mask_apply(struct qr_bitmap * bmp, int mask);
 
 size_t qr_code_total_capacity(int version);
 

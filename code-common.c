@@ -74,18 +74,12 @@ void qr_get_rs_block_sizes(int version,
         assert(data_words + ec_words == total_words);
 }
 
-struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
-                                 unsigned int mask)
+void qr_mask_apply(struct qr_bitmap * bmp, int mask)
 {
-        struct qr_bitmap * bmp;
         int i, j;
 
-        if (mask > 7)
-                return 0;
-
-        bmp = qr_bitmap_clone(orig);
-        if (!bmp)
-                return 0;
+        assert((mask & 0x7) == mask);
+        mask &= 0x7;
 
         /* Slow version for now; we can optimize later */
 
@@ -111,7 +105,5 @@ struct qr_bitmap * qr_mask_apply(const struct qr_bitmap * orig,
                         p[off] ^= (t == 0) << bit;
                 }
         }
-
-        return bmp;
 }
 

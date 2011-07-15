@@ -332,11 +332,12 @@ static int mask_data(struct qr_code * code)
 
         /* Generate bitmap for each mask and evaluate */
         for (i = 0; i < 8; ++i) {
-                test = qr_mask_apply(code->modules, i);
+                test = qr_bitmap_clone(code->modules);
                 if (!test) {
                         qr_bitmap_destroy(mask);
                         return -1;
                 }
+                qr_mask_apply(test, i);
                 score = score_mask(test);
                 fprintf(stderr, "mask %d scored %d\n", i, score);
                 if (!mask || score < best) {

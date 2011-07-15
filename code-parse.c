@@ -212,11 +212,9 @@ int qr_code_parse(const void *      buffer,
 
         fprintf(stderr, "detected ec type %d; mask %d\n", ec, mask);
 
-        code.modules = qr_mask_apply(&src_bmp, mask);
-        if (code.modules == NULL) {
-                fprintf(stderr, "failed to apply mask\n");
-                return -1;
-        }
+        code.modules = qr_bitmap_clone(&src_bmp);
+        /* XXX: check return */
+        qr_mask_apply(code.modules, mask);
 
         qr_layout_init_mask(&code);
 
