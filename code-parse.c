@@ -28,7 +28,6 @@ static int unpack_bits(int version,
                        struct qr_bitstream * raw_bits,
                        struct qr_bitstream * bits_out)
 {
-        /* FIXME: less math here (get the values from a common helper fn) */
         /* FIXME: more comments to explain the algorithm */
 
         int total_words = qr_code_total_capacity(version) / 8;
@@ -36,17 +35,35 @@ static int unpack_bits(int version,
         int total_blocks;
         int i, w, block;
         struct qr_bitstream ** blocks = 0;
+        int status = -1;
 
         qr_get_rs_block_sizes(version, ec, block_count, data_length, ec_length);
         total_blocks = block_count[0] + block_count[1];
 
+        status = qr_bitstream_resize(bits_out,
+                (block_count[0] * data_length[0] +
+                 block_count[1] * data_length[1]) * 8);
+        if (status != 0)
+                goto cleanup;
+
         blocks = malloc(total_blocks * sizeof(*blocks));
-        /* XXX: check return (and below) */
+        if (blocks == NULL)
+                goto cleanup;
+
         for (i = 0; i < total_blocks; ++i)
                 blocks[i] = NULL;
 
-        for (i = 0; i < total_blocks; ++i)
+        /* Allocate temporary space for the blocks */
+        for (i = 0; i < total_blocks; ++i) {
+                int type = (i >= block_count[0]);
                 blocks[i] = qr_bitstream_create();
+                if (blocks[i] == NULL)
+                        goto cleanup;
+                status = qr_bitstream_resize(blocks[i],
+                        (data_length[type] + ec_length[type]) * 8);
+                if (status != 0)
+                        goto cleanup;
+        }
 
         /* Read in the data & EC (see spec table 19) */
 
@@ -72,11 +89,18 @@ static int unpack_bits(int version,
                 struct qr_bitstream * stream = blocks[block];
                 qr_bitstream_seek(stream, 0);
                 qr_bitstream_copy(bits_out, stream, data_length[type] * 8);
-                qr_bitstream_destroy(stream);
         }
-        free(blocks);
+        status = 0;
 
-        return 0;
+cleanup:
+        if (blocks != NULL) {
+                for (block = 0; block < total_blocks; ++block)
+                        if (blocks[block] != NULL)
+                                qr_bitstream_destroy(blocks[block]);
+                free(blocks);
+        }
+
+        return status;
 }
 
 static int read_bits(const struct qr_code * code,
@@ -88,16 +112,28 @@ static int read_bits(const struct qr_code * code,
         struct qr_bitstream * raw_bits;
         struct qr_iterator * layout;
         int w;
-        int ret;
+        int ret = -1;
 
         raw_bits = qr_bitstream_create();
+        if (raw_bits == NULL)
+                goto cleanup;
+
+        ret = qr_bitstream_resize(raw_bits, total_words * 8);
+        if (ret != 0)
+                goto cleanup;
+
         layout = qr_layout_begin((struct qr_code *) code); /* dropping const! */
+        if (layout == NULL)
+                goto cleanup;
         for (w = 0; w < total_words; ++w)
                 qr_bitstream_write(raw_bits, qr_layout_read(layout), 8);
         qr_layout_end(layout);
 
         ret = unpack_bits(code->version, ec, raw_bits, data_bits);
-        qr_bitstream_destroy(raw_bits);
+
+cleanup:
+        if (raw_bits != NULL)
+                qr_bitstream_destroy(raw_bits);
 
         return ret;
 }
@@ -175,11 +211,13 @@ int qr_code_parse(const void *      buffer,
                   size_t            line_count,
                   struct qr_data ** data)
 {
+        /* TODO: more informative return values for errors */
         struct qr_bitmap src_bmp;
         struct qr_code code;
         enum qr_ec_level ec;
         int mask;
         struct qr_bitstream * data_bits;
+        int status;
 
         fprintf(stderr, "parsing code bitmap %lux%lu\n", line_bits, line_count);
 
@@ -213,36 +251,45 @@ int qr_code_parse(const void *      buffer,
         fprintf(stderr, "detected ec type %d; mask %d\n", ec, mask);
 
         code.modules = qr_bitmap_clone(&src_bmp);
-        /* XXX: check return */
+        if (code.modules == NULL) {
+                status = -1;    
+                goto cleanup;
+        }
         qr_mask_apply(code.modules, mask);
 
         qr_layout_init_mask(&code);
 
         data_bits = qr_bitstream_create();
-        /* XXX: check return */
-
-        read_bits(&code, ec, data_bits);
-        /* XXX: check return */
-
-        /*
-        {
-                fprintf(stderr, "decoding failed\n");
-                qr_bitmap_destroy(code.modules);
-                qr_bitstream_destroy(bits);
-                *data = NULL;
-                return -1;
+        if (data_bits == NULL) {
+                status = -1;
+                goto cleanup;
         }
-        */
+
+        status = read_bits(&code, ec, data_bits);
+        if (status != 0)
+                goto cleanup;
 
         *data = malloc(sizeof(*data));
-        /* XXX: check return */
+        if (*data == NULL) {
+                status = -1;
+                goto cleanup;
+        }
 
         (*data)->version = code.version;
         (*data)->ec = ec;
         (*data)->bits = data_bits;
         (*data)->offset = 0;
 
-        return 0;
+        data_bits = 0;
+        status = 0;
+
+cleanup:
+        if (data_bits)
+                qr_bitstream_destroy(data_bits);
+        if (code.modules)
+                qr_bitmap_destroy(code.modules);
+
+        return status;
 }
 
 int qr_decode_format(unsigned bits, enum qr_ec_level * ec, int * mask)
