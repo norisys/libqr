@@ -269,7 +269,7 @@ int qr_code_parse(const void *      buffer,
         if (status != 0)
                 goto cleanup;
 
-        *data = malloc(sizeof(*data));
+        *data = malloc(sizeof(**data));
         if (*data == NULL) {
                 status = -1;
                 goto cleanup;
