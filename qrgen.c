@@ -10,6 +10,7 @@
 #include <qr/bitstream.h>
 #include <qr/code.h>
 #include <qr/data.h>
+#include <qr/version.h>
 
 struct config {
         int               version;
@@ -223,7 +224,7 @@ int main(int argc, char ** argv) {
         if (conf.ansi)
                 output_ansi(code->modules);
         else
-                output_pbm(code->modules, "qrgen v0.1");
+                output_pbm(code->modules, "libqr v" QR_VERSION);
 
         qr_code_destroy(code);
 
