@@ -25,8 +25,8 @@ static int draw_format(struct qr_bitmap * bmp,
                         struct qr_code * code,
                         enum qr_ec_level ec,
                         int mask);
-static int calc_format_bits(enum qr_ec_level ec, int mask);
-static long calc_version_bits(int version);
+static unsigned int calc_format_bits(enum qr_ec_level ec, int mask);
+static unsigned long calc_version_bits(int version);
 
 #include <stdio.h>
 static void x_dump(struct qr_bitstream * bits)
@@ -557,9 +557,9 @@ static int draw_format(struct qr_bitmap * bmp,
         return 0;
 }
 
-static int calc_format_bits(enum qr_ec_level ec, int mask)
+static unsigned int calc_format_bits(enum qr_ec_level ec, int mask)
 {
-        int bits;
+        unsigned int bits;
 
         bits = (ec & 0x3) << 3 | (mask & 0x7);
 
@@ -573,9 +573,9 @@ static int calc_format_bits(enum qr_ec_level ec, int mask)
         return bits;
 }
 
-static long calc_version_bits(int version)
+static unsigned long calc_version_bits(int version)
 {
-        long bits;
+        unsigned long bits;
 
         bits = version & 0x3F;
 
@@ -584,7 +584,6 @@ static long calc_version_bits(int version)
         bits <<= 18 - 6;
         bits |= gf_residue(bits, QR_VERSION_POLY);
 
-fprintf(stderr, "version bits: %lx\n", bits);
         return bits;
 }
 
