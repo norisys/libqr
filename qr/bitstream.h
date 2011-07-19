@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Note: when writing / reading multiple bits, the
  * _most_ significant bits come first in the stream.
@@ -44,6 +48,10 @@ int qr_bitstream_cat(struct qr_bitstream *,
 int qr_bitstream_copy(struct qr_bitstream * dest,
                       struct qr_bitstream * src,
                       size_t count);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

@@ -3,6 +3,10 @@
 
 #include <qr/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void qr_mask_apply(struct qr_bitmap * bmp, int mask);
 
 size_t qr_code_total_capacity(int version);
@@ -19,6 +23,10 @@ void qr_get_rs_block_sizes(int version,
                            int block_count[2],
                            int data_length[2],
                            int ec_length[2]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

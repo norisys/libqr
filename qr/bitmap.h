@@ -1,6 +1,10 @@
 #ifndef QR_BITMAP_H
 #define QR_BITMAP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct qr_bitmap {
         unsigned char * bits;
         unsigned char * mask;
@@ -24,6 +28,10 @@ void qr_bitmap_render(const struct qr_bitmap * bmp,
                       int                      line_repeat,
                       unsigned long            mark,
                       unsigned long            space);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include "types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct qr_data {
         int                   version; /* 1 ~ 40 */
         enum qr_ec_level      ec;
@@ -28,6 +32,10 @@ size_t qr_data_dpart_length(enum qr_data_type type, size_t nchars);
 enum qr_data_type qr_parse_data(const struct qr_data * input,
                                 char **                output,
                                 size_t *               length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

@@ -1,6 +1,10 @@
 #ifndef QR_TYPES_H
 #define QR_TYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct qr_data;
 struct qr_code;
 
@@ -21,6 +25,10 @@ enum qr_ec_level {
         QR_EC_LEVEL_Q = 0x3,
         QR_EC_LEVEL_H = 0x2
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
