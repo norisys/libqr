@@ -137,11 +137,10 @@ static void render_line_2(unsigned char *       out,
                           unsigned long         space)
 {
         unsigned char in_mask;
-        size_t n, b, step, shift;
+        size_t n, b, step;
 
         in_mask = 1;
         step = CHAR_BIT / mod_bits;
-        shift = CHAR_BIT - mod_bits;
         n = dim;
 
         while (n > 0) {
@@ -156,11 +155,9 @@ static void render_line_2(unsigned char *       out,
                                 ++in;
                         }
 
-                        tmp = (tmp >> mod_bits) | (v << shift);
-                        if (--n == 0) {
-                                tmp >>= b * mod_bits;
+                        tmp |= v << (b * mod_bits);
+                        if (--n == 0)
                                 break;
-                        }
                 };
 
                 *out++ = tmp;
@@ -170,7 +167,7 @@ static void render_line_2(unsigned char *       out,
 void qr_bitmap_render(const struct qr_bitmap * bmp,
                       void *                   buffer,
                       int                      mod_bits,
-                      size_t                   line_stride,
+                      ptrdiff_t                line_stride,
                       int                      line_repeat,
                       unsigned long            mark,
                       unsigned long            space)
@@ -188,6 +185,9 @@ void qr_bitmap_render(const struct qr_bitmap * bmp,
         out = buffer;
         dim = bmp->width;
 
+        mark &= (1 << mod_bits) - 1;
+        space &= (1 << mod_bits) - 1;
+
         n = dim;
         while (n-- > 0) {
                 size_t rpt;
@@ -200,8 +200,10 @@ void qr_bitmap_render(const struct qr_bitmap * bmp,
 
                 rpt = line_repeat;
                 next = out + line_stride;
-                while (rpt-- > 0) {
-                        memcpy(next, out, line_stride);
+                while (--rpt > 0) {
+                        size_t bits = dim * mod_bits;
+                        size_t bytes = bits / CHAR_BIT + !!(bits % CHAR_BIT);
+                        memcpy(next, out, bytes);
                         next += line_stride;
                 }
 
