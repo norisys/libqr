@@ -100,7 +100,7 @@ void output_ansi(const struct qr_bitmap * bmp)
         };
 
         unsigned char * line;
-        int x, y;
+        size_t x, y;
 
         line = bmp->bits;
 

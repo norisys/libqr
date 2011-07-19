@@ -175,7 +175,7 @@ static int calc_min_version(enum qr_data_type type,
 
         for (version = 1; version <= 40; ++version) {
                 if (4 + dbits + qr_data_size_field_length(version, type)
-                    < 8 * QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1])
+                    < 8 * (size_t) QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1])
                         return version;
         }
 

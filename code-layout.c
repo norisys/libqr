@@ -21,11 +21,11 @@ struct qr_iterator {
 
 void qr_layout_init_mask(struct qr_code * code)
 {
-        int x, y;
-        int dim = qr_code_width(code);
+        size_t x, y;
+        size_t dim = qr_code_width(code);
         struct qr_bitmap * bmp = code->modules;
         const int * am_pos = QR_ALIGNMENT_LOCATION[code->version - 1];
-        int am_side;
+        size_t am_side;
 
         if (!bmp->mask)
                 qr_bitmap_add_mask(bmp);

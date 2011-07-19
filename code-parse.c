@@ -111,7 +111,7 @@ static int read_bits(const struct qr_code * code,
         const size_t total_words = total_bits / QR_WORD_BITS;
         struct qr_bitstream * raw_bits;
         struct qr_iterator * layout;
-        int w;
+        size_t w;
         int ret = -1;
 
         raw_bits = qr_bitstream_create();
@@ -292,7 +292,7 @@ cleanup:
         return status;
 }
 
-int qr_decode_format(unsigned bits, enum qr_ec_level * ec, int * mask)
+int qr_decode_format(unsigned long bits, enum qr_ec_level * ec, int * mask)
 {
         bits ^= QR_FORMAT_MASK;
 

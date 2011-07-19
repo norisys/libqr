@@ -83,7 +83,7 @@ struct qr_bitstream * rs_generate_words(struct qr_bitstream * data,
         unsigned int * b = 0;
         unsigned int * g;
         size_t n = rs_words;
-        int i, r;
+        size_t i, r;
 
         assert(qr_bitstream_remaining(data) >= data_words * 8);
 

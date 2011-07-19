@@ -5,7 +5,7 @@
 
 #include <qr/bitmap.h>
 
-struct qr_bitmap * qr_bitmap_create(int width, int height, int masked)
+struct qr_bitmap * qr_bitmap_create(size_t width, size_t height, int masked)
 {
         struct qr_bitmap * out;
         size_t size;
@@ -169,9 +169,9 @@ static void render_line_2(unsigned char *       out,
 
 void qr_bitmap_render(const struct qr_bitmap * bmp,
                       void *                   buffer,
-                      size_t                   mod_bits,
+                      int                      mod_bits,
                       size_t                   line_stride,
-                      size_t                   line_repeat,
+                      int                      line_repeat,
                       unsigned long            mark,
                       unsigned long            space)
 {

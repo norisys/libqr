@@ -76,7 +76,7 @@ void qr_get_rs_block_sizes(int version,
 
 void qr_mask_apply(struct qr_bitmap * bmp, int mask)
 {
-        int i, j;
+        size_t i, j;
 
         assert((mask & 0x7) == mask);
         mask &= 0x7;

@@ -36,7 +36,7 @@ static void x_dump(struct qr_bitstream * bits)
         qr_bitstream_seek(bits, 0);
         n = qr_bitstream_size(bits);
         for (i = 0; i < n; ++i) {
-                fprintf(stderr, "%d", qr_bitstream_read(bits, 1));
+                fprintf(stderr, "%d", (int) qr_bitstream_read(bits, 1));
                 if (i % 8 == 7)
                         fputc(' ', stderr);
                 if ((i+1) % (7 * 8) == 0)
@@ -173,7 +173,7 @@ static struct qr_bitstream * make_data(int version,
         const size_t total_data = QR_DATA_WORD_COUNT[version - 1][ec ^ 0x1];
         int block_count[2], data_length[2], ec_length[2];
         int total_blocks;
-        size_t i, w;
+        int i, w;
         struct qr_bitstream * dcopy = 0;
         struct qr_bitstream * out = 0;
         struct qr_bitstream ** blocks = 0;
@@ -296,7 +296,7 @@ struct qr_code * qr_code_create(const struct qr_data * data)
                 goto fail;
 
         qr_bitstream_seek(bits, 0);
-        while (qr_bitstream_remaining(bits) >= QR_WORD_BITS)
+        while (qr_bitstream_remaining(bits) >= (size_t) QR_WORD_BITS)
                 qr_layout_write(layout, qr_bitstream_read(bits, QR_WORD_BITS));
         qr_layout_end(layout);
 
@@ -370,7 +370,8 @@ static int score_mask(const struct qr_bitmap * bmp)
 static int score_runs(const struct qr_bitmap * bmp, int base)
 {
         /* Runs of 5+n bits -> N[0] + i */
-        int x, y, flip;
+        size_t x, y;
+        int flip;
         int score = 0;
         int count, last;
 
@@ -406,7 +407,7 @@ static int score_runs(const struct qr_bitmap * bmp, int base)
 static int count_2blocks(const struct qr_bitmap * bmp)
 {
         /* Count the number of 2x2 blocks (on or off) */
-        int x, y;
+        size_t x, y;
         int count = 0;
 
         /* Slow and stupid */
@@ -435,7 +436,8 @@ static int count_2blocks(const struct qr_bitmap * bmp)
 static int count_locators(const struct qr_bitmap * bmp)
 {
         /* 1:1:3:1:1 patterns -> N[2] */
-        int x, y, flip;
+        size_t x, y;
+        int flip;
         int count = 0;
 
         for (flip = 0; flip <= 1; ++flip) {
@@ -469,7 +471,7 @@ static int count_locators(const struct qr_bitmap * bmp)
 static int calc_bw_balance(const struct qr_bitmap * bmp)
 {
         /* Calculate the proportion (in percent) of "on" bits */
-        int x, y;
+        size_t x, y;
         unsigned char bit;
         long on, total;
 

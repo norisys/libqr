@@ -121,13 +121,13 @@ size_t qr_bitstream_size(const struct qr_bitstream * stream)
         return stream->count;
 }
 
-unsigned int qr_bitstream_read(struct qr_bitstream * stream, size_t bits)
+unsigned long qr_bitstream_read(struct qr_bitstream * stream, int bits)
 {
-        unsigned int result = 0;
+        unsigned long result = 0;
         unsigned char * byte;
         size_t bitnum;
 
-        assert(qr_bitstream_remaining(stream) >= bits);
+        assert(qr_bitstream_remaining(stream) >= (size_t) bits);
 
         byte = stream->buffer + (stream->pos / CHAR_BIT);
         bitnum = stream->pos % CHAR_BIT;
@@ -149,7 +149,7 @@ unsigned int qr_bitstream_read(struct qr_bitstream * stream, size_t bits)
 void qr_bitstream_unpack(struct qr_bitstream * stream,
                       unsigned int *     result,
                       size_t             count,
-                      size_t             bitsize)
+                      int                bitsize)
 {
         assert(qr_bitstream_remaining(stream) >= (count * bitsize));
 
@@ -158,8 +158,8 @@ void qr_bitstream_unpack(struct qr_bitstream * stream,
 }
 
 int qr_bitstream_write(struct qr_bitstream * stream,
-                    unsigned int       value,
-                    size_t             bits)
+                    unsigned long      value,
+                    int                bits)
 {
         unsigned char * byte;
         size_t bitnum;
@@ -189,7 +189,7 @@ int qr_bitstream_write(struct qr_bitstream * stream,
 int qr_bitstream_pack(struct qr_bitstream *   stream,
                    const unsigned int * values,
                    size_t               count,
-                   size_t               bitsize)
+                   int                  bitsize)
 {
         if (ensure_available(stream, count * bitsize) != 0)
                 return -1;

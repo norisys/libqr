@@ -8,7 +8,7 @@ struct qr_bitmap {
         size_t width, height;
 };
 
-struct qr_bitmap * qr_bitmap_create(int width, int height, int masked);
+struct qr_bitmap * qr_bitmap_create(size_t width, size_t height, int masked);
 void qr_bitmap_destroy(struct qr_bitmap *);
 
 int qr_bitmap_add_mask(struct qr_bitmap *);
@@ -19,9 +19,9 @@ void qr_bitmap_merge(struct qr_bitmap * dest, const struct qr_bitmap * src);
 
 void qr_bitmap_render(const struct qr_bitmap * bmp,
                       void *                   buffer,
-                      size_t                   mod_bits,
+                      int                      mod_bits,
                       size_t                   line_stride,
-                      size_t                   line_repeat,
+                      int                      line_repeat,
                       unsigned long            mark,
                       unsigned long            space);
 

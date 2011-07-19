@@ -22,21 +22,21 @@ size_t qr_bitstream_tell(const struct qr_bitstream *);
 size_t qr_bitstream_remaining(const struct qr_bitstream *);
 size_t qr_bitstream_size(const struct qr_bitstream *);
 
-unsigned int qr_bitstream_read(struct qr_bitstream *, size_t bits);
+unsigned long qr_bitstream_read(struct qr_bitstream *, int bits);
 
 void qr_bitstream_unpack(struct qr_bitstream *,
                          unsigned int * result,
                          size_t         count,
-                         size_t         bitsize);
+                         int            bitsize);
 
 int qr_bitstream_write(struct qr_bitstream *,
-                       unsigned int value,
-                       size_t       bits);
+                       unsigned long value,
+                       int bits);
 
 int qr_bitstream_pack(struct qr_bitstream *,
                       const unsigned int * values,
                       size_t               count,
-                      size_t               bitsize);
+                      int                  bitsize);
 
 int qr_bitstream_cat(struct qr_bitstream *,
                      const struct qr_bitstream * src);

@@ -17,7 +17,7 @@ static const unsigned int QR_FORMAT_POLY = 0x537;
 static const unsigned int QR_VERSION_POLY = 0x1F25;
 
 /* A QR-code word is always 8 bits, but CHAR_BIT might not be */
-static const unsigned int QR_WORD_BITS = 8;
+static const int QR_WORD_BITS = 8;
 
 extern const int QR_ALIGNMENT_LOCATION[40][7];
 extern const int QR_DATA_WORD_COUNT[40][4];
