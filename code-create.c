@@ -28,23 +28,6 @@ static int draw_format(struct qr_bitmap * bmp,
 static unsigned int calc_format_bits(enum qr_ec_level ec, int mask);
 static unsigned long calc_version_bits(int version);
 
-#include <stdio.h>
-static void x_dump(struct qr_bitstream * bits)
-{
-        size_t i, n;
-
-        qr_bitstream_seek(bits, 0);
-        n = qr_bitstream_size(bits);
-        for (i = 0; i < n; ++i) {
-                fprintf(stderr, "%d", (int) qr_bitstream_read(bits, 1));
-                if (i % 8 == 7)
-                        fputc(' ', stderr);
-                if ((i+1) % (7 * 8) == 0)
-                        fputc('\n', stderr);
-        }
-        fputc('\n', stderr);
-}
-
 static void setpx(struct qr_bitmap * bmp, int x, int y)
 {
         size_t off = y * bmp->stride + x / CHAR_BIT;
@@ -197,9 +180,6 @@ static struct qr_bitstream * make_data(int version,
         if (pad_data(dcopy, total_data * QR_WORD_BITS) != 0)
                 goto fail;
 
-        fputs("Pad data:\n", stderr);
-        x_dump(dcopy);
-
         /* Make space for the RS blocks */
         blocks = malloc(total_blocks * sizeof(*blocks));
         if (!blocks)
@@ -209,7 +189,6 @@ static struct qr_bitstream * make_data(int version,
 
         /* Generate RS codewords */
         qr_bitstream_seek(dcopy, 0);
-        fputs("Generate RS blocks:\n", stderr);
         for (i = 0; i < total_blocks; ++i) {
                 int type = (i >= block_count[0]);
                 blocks[i] = rs_generate_words(dcopy,
@@ -222,7 +201,6 @@ static struct qr_bitstream * make_data(int version,
                         blocks = 0;
                         goto fail;
                 }
-                x_dump(blocks[i]);
         }
 
         /* Finally, write everything out in the correct order */
@@ -247,8 +225,6 @@ static struct qr_bitstream * make_data(int version,
 
         qr_bitstream_write(out, 0, total_bits % QR_WORD_BITS);
 
-        fputs("Final bitstream:\n", stderr);
-        x_dump(out);
 exit:
         if (blocks) {
                 while (total_blocks--)
@@ -336,7 +312,6 @@ static int mask_data(struct qr_code * code)
                 }
                 qr_mask_apply(test, i);
                 score = score_mask(test);
-                fprintf(stderr, "mask %d scored %d\n", i, score);
                 if (!mask || score < best) {
                         best = score;
                         selected = i;
@@ -346,7 +321,6 @@ static int mask_data(struct qr_code * code)
                         qr_bitmap_destroy(test);
                 }
         }
-        fprintf(stderr, "Selected mask %d (%d)\n", selected, best);
 
         qr_bitmap_destroy(code->modules);
         code->modules = mask;
