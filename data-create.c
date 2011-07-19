@@ -182,7 +182,7 @@ static int calc_min_version(enum qr_data_type type,
         return -1;
 }
 
-struct qr_data * qr_create_data(int               version,
+struct qr_data * qr_data_create(int               version,
                                 enum qr_ec_level  ec,
                                 enum qr_data_type type,
                                 const char *      input,

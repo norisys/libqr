@@ -3,7 +3,7 @@
 #include <qr/bitstream.h>
 #include <qr/data.h>
 
-void qr_free_data(struct qr_data * data)
+void qr_data_destroy(struct qr_data * data)
 {
         qr_bitstream_destroy(data->bits);
         free(data);

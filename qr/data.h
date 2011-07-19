@@ -11,13 +11,13 @@ struct qr_data {
         size_t                offset;
 };
 
-struct qr_data * qr_create_data(int               format, /* 1 ~ 40; 0=auto */
+struct qr_data * qr_data_create(int               format, /* 1 ~ 40; 0=auto */
                                 enum qr_ec_level  ec,
                                 enum qr_data_type type,
                                 const char *      input,
                                 size_t            length);
 
-void qr_free_data(struct qr_data *);
+void qr_data_destroy(struct qr_data *);
 
 enum qr_data_type qr_data_type(const struct qr_data *);
 

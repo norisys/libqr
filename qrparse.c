@@ -51,7 +51,7 @@ int main(int argc, char ** argv)
                 }
                 fprintf(stderr, "Data type: %s; %lu bytes\nContent: %s\n", type_str, data_len, data_str);
                 free(data_str);
-                qr_free_data(data);
+                qr_data_destroy(data);
         }
 
         return 0;
