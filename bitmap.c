@@ -167,7 +167,7 @@ static void render_line_2(unsigned char *       out,
 void qr_bitmap_render(const struct qr_bitmap * bmp,
                       void *                   buffer,
                       int                      mod_bits,
-                      ptrdiff_t                line_stride,
+                      long                     line_stride,
                       int                      line_repeat,
                       unsigned long            mark,
                       unsigned long            space)
@@ -185,8 +185,10 @@ void qr_bitmap_render(const struct qr_bitmap * bmp,
         out = buffer;
         dim = bmp->width;
 
-        mark &= (1 << mod_bits) - 1;
-        space &= (1 << mod_bits) - 1;
+        if (pack) {
+                mark &= (1 << mod_bits) - 1;
+                space &= (1 << mod_bits) - 1;
+        }
 
         n = dim;
         while (n-- > 0) {

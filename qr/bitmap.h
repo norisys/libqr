@@ -24,7 +24,7 @@ void qr_bitmap_merge(struct qr_bitmap * dest, const struct qr_bitmap * src);
 void qr_bitmap_render(const struct qr_bitmap * bmp,
                       void *                   buffer,
                       int                      mod_bits,
-                      ptrdiff_t                line_stride,
+                      long                     line_stride,
                       int                      line_repeat,
                       unsigned long            mark,
                       unsigned long            space);
