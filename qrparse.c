@@ -49,7 +49,7 @@ int main(int argc, char ** argv)
                 case QR_DATA_FNC1: type_str = "FNC1"; break;
                 default: type_str = "(unknown)"; break;
                 }
-                fprintf(stderr, "Data type: %s; %lu bytes\nContent: %s\n", type_str, data_len, data_str);
+                fprintf(stderr, "Data type: %s; %lu bytes\nContent: %s\n", type_str, (unsigned long) data_len, data_str);
                 free(data_str);
                 qr_data_destroy(data);
         }

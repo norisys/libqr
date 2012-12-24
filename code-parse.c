@@ -216,10 +216,10 @@ int qr_code_parse(const void *      buffer,
         struct qr_code code;
         enum qr_ec_level ec;
         int mask;
-        struct qr_bitstream * data_bits;
+        struct qr_bitstream * data_bits = NULL;
         int status;
 
-        fprintf(stderr, "parsing code bitmap %lux%lu\n", line_bits, line_count);
+        fprintf(stderr, "parsing code bitmap %lux%lu\n", (unsigned long) line_bits, (unsigned long) line_count);
 
         if (line_bits != line_count
             || line_bits < 21

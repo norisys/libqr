@@ -19,7 +19,7 @@ static void write_type_and_length(struct qr_data *  data,
 }
 
 static struct qr_data * encode_numeric(struct qr_data * data,
-                                       const char *     input,
+                                       const unsigned char * input,
                                        size_t           length)
 {
         struct qr_bitstream * stream = data->bits;
@@ -92,7 +92,7 @@ static int get_alpha_code(char c)
 }
 
 static struct qr_data * encode_alpha(struct qr_data * data,
-                                     const char *     input,
+                                     const unsigned char * input,
                                      size_t           length)
 {
         struct qr_bitstream * stream = data->bits;
@@ -135,7 +135,7 @@ static struct qr_data * encode_alpha(struct qr_data * data,
 }
 
 static struct qr_data * encode_8bit(struct qr_data * data,
-                                    const char *     input,
+                                    const unsigned char * input,
                                     size_t           length)
 {
         struct qr_bitstream * stream = data->bits;
@@ -158,7 +158,7 @@ static struct qr_data * encode_8bit(struct qr_data * data,
 }
 
 static struct qr_data * encode_kanji(struct qr_data * data,
-                                     const char *     input,
+                                     const unsigned char * input,
                                      size_t           length)
 {
         return 0;
@@ -213,13 +213,17 @@ struct qr_data * qr_data_create(int               version,
 
                 switch (type) {
                 case QR_DATA_NUMERIC:
-                        ret = encode_numeric(data, input, length); break;
+                        ret = encode_numeric(data, (const unsigned char *) input, length);
+                        break;
                 case QR_DATA_ALPHA:
-                        ret = encode_alpha(data, input, length); break;
+                        ret = encode_alpha(data, (const unsigned char *) input, length);
+                        break;
                 case QR_DATA_8BIT:
-                        ret = encode_8bit(data, input, length); break;
+                        ret = encode_8bit(data, (const unsigned char *) input, length);
+                        break;
                 case QR_DATA_KANJI:
-                        ret = encode_kanji(data, input, length); break;
+                        ret = encode_kanji(data, (const unsigned char *) input, length);
+                        break;
                 default:
                         /* unsupported / invalid */
                         ret = 0;
