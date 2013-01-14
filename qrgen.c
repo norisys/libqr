@@ -2,6 +2,8 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <limits.h>
+#include <png.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +18,11 @@ struct config {
         int               version;
         enum qr_ec_level  ec;
         enum qr_data_type dtype;
-        int               ansi;
+        enum {
+                FORMAT_ANSI,
+                FORMAT_PBM,
+                FORMAT_PNG
+        } format;
         const char *      file;
         const char *      outfile;
         const char *      input;
@@ -120,6 +126,78 @@ void output_ansi(FILE * file, const struct qr_bitmap * bmp)
         }
 }
 
+void output_png(FILE * file, const struct qr_bitmap * bmp, const char * comment)
+{
+        const int px_size = 4;
+        png_structp png_ptr;
+        png_infop info_ptr;
+        png_text text;
+        int x, y, p;
+        unsigned char * row;
+
+        png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+        if (!png_ptr)
+                goto err;
+
+        info_ptr = png_create_info_struct(png_ptr);
+        if (!info_ptr)
+                goto err;
+
+        if (setjmp(png_jmpbuf(png_ptr)))
+                goto err;
+
+        png_init_io(png_ptr, file);
+        png_set_IHDR(png_ptr, info_ptr,
+                (bmp->width + 8) * px_size,
+                (bmp->height + 8) * px_size,
+                1,
+                PNG_COLOR_TYPE_GRAY,
+                PNG_INTERLACE_NONE,
+                PNG_COMPRESSION_TYPE_DEFAULT,
+                PNG_FILTER_TYPE_DEFAULT);
+
+        text.compression = PNG_TEXT_COMPRESSION_NONE;
+        text.key = "Software";
+        text.text = (char *) comment;
+        text.text_length = strlen(comment);
+        png_set_text(png_ptr, info_ptr, &text, 1);
+
+        png_write_info(png_ptr, info_ptr);
+        png_set_packing(png_ptr);
+
+        row = malloc((bmp->width + 8) * px_size);
+        memset(row, 1, (bmp->width + 8) * px_size);
+        for (y = 0; y < 4; ++y)
+                for (p = 0; p < px_size; ++p)
+                        png_write_row(png_ptr, row);
+
+        for (y = 0; y < bmp->height; ++y) {
+                const unsigned char * bmp_row = bmp->bits + y * bmp->stride;
+                unsigned char * out = row + 4 * px_size;
+                for (x = 0; x < bmp->width; ++x) {
+                        int px = bmp_row[x / CHAR_BIT] & (1 << (x % CHAR_BIT));
+                        for (p = 0; p < px_size; ++p)
+                                *out++ = !px;
+                }
+                for (p = 0; p < px_size; ++p)
+                        png_write_row(png_ptr, row);
+        }
+
+        memset(row, 1, (bmp->width + 8) * px_size);
+        for (y = 0; y < 4; ++y)
+                for (p = 0; p < px_size; ++p)
+                        png_write_row(png_ptr, row);
+
+        free(row);
+        png_write_end(png_ptr, info_ptr);
+        png_destroy_write_struct(&png_ptr, NULL);
+        return;
+
+err:
+        fprintf(stderr, "error writing PNG\n");
+        exit(2);
+}
+
 void show_help() {
         fprintf(stderr,
                 "Usage:\n\t%s [options] <data>\n\n"
@@ -129,6 +207,7 @@ void show_help() {
                 "\t-e <type>  Specify EC type: L, M, Q, H\n"
                 "\t-a         Output as ANSI graphics (default)\n"
                 "\t-p         Output as PBM\n"
+                "\t-g         Output as PNG\n"
                 "\t-o <file>  File to write (- for stdout)\n\n",
                 "qrgen");
 }
@@ -138,7 +217,7 @@ void set_default_config(struct config * conf)
         conf->version = 0;
         conf->ec = QR_EC_LEVEL_M;
         conf->dtype = QR_DATA_8BIT;
-        conf->ansi = 1;
+        conf->format = FORMAT_ANSI;
         conf->file = NULL;
         conf->outfile = NULL;
         conf->input = NULL;
@@ -149,7 +228,7 @@ void parse_options(int argc, char ** argv, struct config * conf)
         int c;
 
         for (;;) {
-                c = getopt(argc, argv, ":hf:v:e:t:apo:");
+                c = getopt(argc, argv, ":hf:v:e:t:apgo:");
 
                 if (c == -1) /* no more options */
                         break;
@@ -186,9 +265,11 @@ void parse_options(int argc, char ** argv, struct config * conf)
                         fprintf(stderr, "XXX: ignored \"type\"\n");
                         break;
                 case 'a': /* ansi */
-                        conf->ansi = 1; break;
+                        conf->format = FORMAT_ANSI; break;
                 case 'p': /* pnm */
-                        conf->ansi = 0; break;
+                        conf->format = FORMAT_PBM; break;
+                case 'g': /* png */
+                        conf->format = FORMAT_PNG; break;
                 case 'o': /* output file */
                         conf->outfile = optarg; break;
                 case ':':
@@ -272,7 +353,14 @@ int main(int argc, char ** argv) {
                 len = strlen(conf.input);
 
         if (!conf.outfile) {
-                conf.outfile = conf.ansi ? "-" : "qr.pbm";
+                switch (conf.format) {
+                case FORMAT_ANSI:
+                        conf.outfile = "-"; break;
+                case FORMAT_PBM:
+                        conf.outfile = "qr.pbm"; break;
+                case FORMAT_PNG:
+                        conf.outfile = "qr.png"; break;
+                }
         }
 
         if (strcmp(conf.outfile, "-") == 0) {
@@ -294,10 +382,17 @@ int main(int argc, char ** argv) {
         if (conf.file)
                 free(file_data);
 
-        if (conf.ansi)
+        switch (conf.format) {
+        case FORMAT_ANSI:
                 output_ansi(outfile, code->modules);
-        else
+                break;
+        case FORMAT_PBM:
                 output_pbm(outfile, code->modules, "libqr v" QR_VERSION);
+                break;
+        case FORMAT_PNG:
+                output_png(outfile, code->modules, "libqr v" QR_VERSION);
+                break;
+        }
 
         fclose(outfile);
         qr_code_destroy(code);

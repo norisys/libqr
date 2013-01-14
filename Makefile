@@ -21,7 +21,7 @@ $(OBJECTS) : $(wildcard *.h qr/*.h)
 libqr : libqr.a($(OBJECTS))
 
 qrgen : libqr qrgen.c
-	$(CC) $(CFLAGS) -o qrgen qrgen.c libqr.a
+	$(CC) $(CFLAGS) -o qrgen qrgen.c libqr.a $(shell pkg-config libpng --cflags --libs)
 
 qrparse : libqr qrparse.c
 	$(CC) $(CFLAGS) -o qrparse qrparse.c libqr.a
