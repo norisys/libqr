@@ -18,6 +18,7 @@ struct config {
         enum qr_data_type dtype;
         int               ansi;
         const char *      file;
+        const char *      outfile;
         const char *      input;
 };
 
@@ -51,17 +52,17 @@ struct qr_code * create(int               version,
         return code;
 }
 
-void output_pbm(const struct qr_bitmap * bmp, const char * comment)
+void output_pbm(FILE * file, const struct qr_bitmap * bmp, const char * comment)
 {
         unsigned char * row;
         int x, y;
 
-        puts("P1");
+        fputs("P1\n", file);
 
         if (comment)
-                printf("# %s\n", comment);
+                fprintf(file, "# %s\n", comment);
 
-        printf("%u %u\n",
+        fprintf(file, "%u %u\n",
                (unsigned)bmp->width + 8,
                (unsigned)bmp->height + 8);
 
@@ -71,27 +72,27 @@ void output_pbm(const struct qr_bitmap * bmp, const char * comment)
 
                 if (y < 0 || y >= (int)bmp->height) {
                         for (x = 0; x < (int)bmp->width + 8; ++x)
-                                printf("0 ");
-                        putchar('\n');
+                                fputs("0 ", file);
+                        fputc('\n', file);
                         continue;
                 }
 
-                printf("0 0 0 0 ");
+                fputs("0 0 0 0 ", file);
 
                 for (x = 0; x < (int)bmp->width; ++x) {
 
                         int mask = 1 << x % CHAR_BIT;
                         int byte = row[x / CHAR_BIT];
 
-                        printf("%c ", (byte & mask) ? '1' : '0');
+                        fprintf(file, "%c ", (byte & mask) ? '1' : '0');
                 }
 
-                puts("0 0 0 0");
+                fputs("0 0 0 0\n", file);
                 row += bmp->stride;
         }
 }
 
-void output_ansi(const struct qr_bitmap * bmp)
+void output_ansi(FILE * file, const struct qr_bitmap * bmp)
 {
         const char * out[2] = {
                 "  ",
@@ -110,10 +111,10 @@ void output_ansi(const struct qr_bitmap * bmp)
                         int mask = 1 << (x % CHAR_BIT);
                         int byte = line[x / CHAR_BIT];
 
-                        printf("%s", out[!!(byte & mask)]);
+                        fprintf(file, "%s", out[!!(byte & mask)]);
                 }
 
-                putchar('\n');
+                fputc('\n', file);
 
                 line += bmp->stride;
         }
@@ -127,7 +128,8 @@ void show_help() {
                 "\t-v <n>     Specify QR version (size) 1 <= n <= 40\n"
                 "\t-e <type>  Specify EC type: L, M, Q, H\n"
                 "\t-a         Output as ANSI graphics (default)\n"
-                "\t-p         Output as PBM\n\n",
+                "\t-p         Output as PBM\n"
+                "\t-o <file>  File to write (- for stdout)\n\n",
                 "qrgen");
 }
 
@@ -138,6 +140,7 @@ void set_default_config(struct config * conf)
         conf->dtype = QR_DATA_8BIT;
         conf->ansi = 1;
         conf->file = NULL;
+        conf->outfile = NULL;
         conf->input = NULL;
 }
 
@@ -146,7 +149,7 @@ void parse_options(int argc, char ** argv, struct config * conf)
         int c;
 
         for (;;) {
-                c = getopt(argc, argv, ":hf:v:e:t:ap");
+                c = getopt(argc, argv, ":hf:v:e:t:apo:");
 
                 if (c == -1) /* no more options */
                         break;
@@ -186,6 +189,8 @@ void parse_options(int argc, char ** argv, struct config * conf)
                         conf->ansi = 1; break;
                 case 'p': /* pnm */
                         conf->ansi = 0; break;
+                case 'o': /* output file */
+                        conf->outfile = optarg; break;
                 case ':':
                         fprintf(stderr,
                                 "Argument \"%s\" missing parameter\n",
@@ -256,6 +261,7 @@ int main(int argc, char ** argv) {
         struct qr_code * code;
         char * file_data;
         size_t len;
+        FILE * outfile;
 
         set_default_config(&conf);
         parse_options(argc, argv, &conf);
@@ -265,6 +271,19 @@ int main(int argc, char ** argv) {
         else
                 len = strlen(conf.input);
 
+        if (!conf.outfile) {
+                conf.outfile = conf.ansi ? "-" : "qr.pbm";
+        }
+
+        if (strcmp(conf.outfile, "-") == 0) {
+                outfile = stdout;
+        } else {
+                outfile = fopen(conf.outfile, "wb");
+                if (!outfile) {
+                        perror("fopen");
+                        exit(2);
+                }
+        }
 
         code = create(conf.version,
                       conf.ec,
@@ -276,10 +295,11 @@ int main(int argc, char ** argv) {
                 free(file_data);
 
         if (conf.ansi)
-                output_ansi(code->modules);
+                output_ansi(outfile, code->modules);
         else
-                output_pbm(code->modules, "libqr v" QR_VERSION);
+                output_pbm(outfile, code->modules, "libqr v" QR_VERSION);
 
+        fclose(outfile);
         qr_code_destroy(code);
 
         return 0;
