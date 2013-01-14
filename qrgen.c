@@ -17,19 +17,18 @@ struct config {
         enum qr_ec_level  ec;
         enum qr_data_type dtype;
         int               ansi;
+        const char *      file;
         const char *      input;
 };
 
 struct qr_code * create(int               version,
                         enum qr_ec_level  ec,
                         enum qr_data_type dtype,
-                        const char *      input)
+                        const char *      input,
+                        size_t            len)
 {
         struct qr_data * data;
         struct qr_code * code;
-        size_t len;
-
-        len = strlen(input);
 
         data = qr_data_create(version, ec, dtype, input, len);
 
@@ -124,6 +123,7 @@ void show_help() {
         fprintf(stderr,
                 "Usage:\n\t%s [options] <data>\n\n"
                 "\t-h         Display this help message\n"
+                "\t-f <file>  File containing data to encode (- for stdin)\n"
                 "\t-v <n>     Specify QR version (size) 1 <= n <= 40\n"
                 "\t-e <type>  Specify EC type: L, M, Q, H\n"
                 "\t-a         Output as ANSI graphics (default)\n"
@@ -137,6 +137,7 @@ void set_default_config(struct config * conf)
         conf->ec = QR_EC_LEVEL_M;
         conf->dtype = QR_DATA_8BIT;
         conf->ansi = 1;
+        conf->file = NULL;
         conf->input = NULL;
 }
 
@@ -145,7 +146,7 @@ void parse_options(int argc, char ** argv, struct config * conf)
         int c;
 
         for (;;) {
-                c = getopt(argc, argv, ":hv:e:t:ap");
+                c = getopt(argc, argv, ":hf:v:e:t:ap");
 
                 if (c == -1) /* no more options */
                         break;
@@ -154,6 +155,9 @@ void parse_options(int argc, char ** argv, struct config * conf)
                 case 'h': /* help */
                         show_help();
                         exit(0);
+                        break;
+                case 'f': /* file */
+                        conf->file = optarg;
                         break;
                 case 'v': /* version */
                         conf->version = atoi(optarg);
@@ -202,24 +206,74 @@ void parse_options(int argc, char ** argv, struct config * conf)
         if (optind < argc)
                 conf->input = argv[optind++];
 
-        if (!conf->input) {
+        if (!conf->file && !conf->input) {
                 fprintf(stderr, "No data (try -h for help)\n");
                 exit(1);
         }
+}
+
+void slurp_file(const char * path, char ** data, size_t * len)
+{
+        const size_t chunk_size = 65536;
+        FILE * file;
+        char * tmpbuf;
+        size_t count;
+
+        if (strcmp(path, "-") == 0)
+                file = stdin;
+        else
+                file = fopen(path, "rb");
+
+        if (!file) {
+                fprintf(stderr, "Failed to open %s\n", path);
+                exit(2);
+        }
+
+        *data = NULL;
+        *len = 0;
+
+        do {
+                tmpbuf = realloc(*data, *len + chunk_size);
+                if (!tmpbuf) {
+                        perror("realloc");
+                        exit(2);
+                }
+                *data = tmpbuf;
+                count = fread(*data + *len, 1, chunk_size, file);
+                if (count == 0 && !feof(file)) {
+                        perror("fread");
+                        exit(2);
+                }
+                *len += count;
+        } while (*len == chunk_size);
+
+        fclose(file);
 }
 
 int main(int argc, char ** argv) {
 
         struct config conf;
         struct qr_code * code;
+        char * file_data;
+        size_t len;
 
         set_default_config(&conf);
         parse_options(argc, argv, &conf);
 
+        if (conf.file)
+                slurp_file(conf.file, &file_data, &len);
+        else
+                len = strlen(conf.input);
+
+
         code = create(conf.version,
                       conf.ec,
                       conf.dtype,
-                      conf.input);
+                      conf.file ? file_data : conf.input,
+                      len);
+
+        if (conf.file)
+                free(file_data);
 
         if (conf.ansi)
                 output_ansi(code->modules);
